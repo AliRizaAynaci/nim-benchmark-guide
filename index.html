@@ -1,0 +1,1471 @@
+<!DOCTYPE html>
+<html lang="tr" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NIM Lab — NVIDIA NIM + OpenCode: Model Research & Benchmark Explorer</title>
+  <meta name="description" content="NIM Lab: NVIDIA NIM (build.nvidia.com) üzerindeki açık ağırlıklı LLM'leri OpenCode ile terminalinden çalıştırmak için bağımsız, kişisel kurulum ve benchmark araştırma sayfası. SWE-bench Verified, DeepSWE v1.1, Terminal-Bench 2.1 ve Artificial Analysis verileri kaynakları ve erişim tarihleriyle listelenir.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%2305060a'/%3E%3Cpath d='M8 11l6 5-6 5' stroke='%2376b900' stroke-width='2.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M15 21h9' stroke='%23a3e635' stroke-width='2.5' stroke-linecap='round'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/motion@11.11.13/dist/motion.js"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            ink: '#05060a',
+            panel: '#0b0e15',
+            nvidia: '#76b900',
+          },
+          fontFamily: {
+            sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'ui-monospace', 'SFMono-Regular', 'monospace'],
+          },
+        },
+      },
+    }
+  </script>
+</head>
+<body class="min-h-screen bg-ink font-sans text-zinc-300 antialiased selection:bg-lime-300/25 selection:text-white">
+
+  <div id="progress" class="fixed top-0 left-0 z-[60] h-[2px] w-full origin-left scale-x-0 bg-gradient-to-r from-nvidia to-lime-300"></div>
+
+  <div aria-hidden="true" class="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
+    <div id="bg-orb-a" class="absolute -left-44 top-[6%] h-[26rem] w-[26rem] rounded-full bg-nvidia/[0.07] blur-3xl will-change-transform"></div>
+    <div id="bg-orb-b" class="absolute -right-52 top-[44%] h-[30rem] w-[30rem] rounded-full bg-violet-600/[0.06] blur-3xl will-change-transform"></div>
+    <div id="bg-orb-c" class="absolute left-[36%] top-[72%] h-[22rem] w-[22rem] rounded-full bg-cyan-400/[0.05] blur-3xl will-change-transform"></div>
+  </div>
+  <canvas id="bg-canvas" aria-hidden="true" class="pointer-events-none fixed inset-0 -z-10"></canvas>
+
+  <nav id="site-nav" class="fixed inset-x-0 top-0 z-50 border-b border-white/5 bg-ink/80 backdrop-blur-xl">
+    <div class="mx-auto flex h-16 max-w-6xl items-center justify-between px-5">
+      <a href="#" class="flex items-center gap-2.5">
+        <span class="grid h-8 w-8 place-items-center rounded-lg border border-nvidia/40 bg-nvidia/10 font-mono text-sm font-bold text-lime-300">>_</span>
+        <span class="font-bold tracking-tight text-zinc-100">NIM<span class="text-nvidia">Lab</span><span class="ml-2 hidden font-mono text-[10px] font-normal text-zinc-500 sm:inline">kişisel teknik proje</span></span>
+      </a>
+      <div class="hidden items-center gap-7 text-sm font-medium text-zinc-400 md:flex">
+        <a href="#kurulum" class="relative after:absolute after:-bottom-1 after:left-0 after:h-px after:w-0 after:bg-lime-300 after:transition-all after:duration-300 hover:text-zinc-100 hover:after:w-full">Kurulum</a>
+        <a href="#katalog" class="relative after:absolute after:-bottom-1 after:left-0 after:h-px after:w-0 after:bg-lime-300 after:transition-all after:duration-300 hover:text-zinc-100 hover:after:w-full">Katalog</a>
+        <a href="#benchmark" class="relative after:absolute after:-bottom-1 after:left-0 after:h-px after:w-0 after:bg-lime-300 after:transition-all after:duration-300 hover:text-zinc-100 hover:after:w-full">Benchmarklar</a>
+        <a href="#limitler" class="relative after:absolute after:-bottom-1 after:left-0 after:h-px after:w-0 after:bg-lime-300 after:transition-all after:duration-300 hover:text-zinc-100 hover:after:w-full">Limitler</a>
+        <a href="https://build.nvidia.com" target="_blank" rel="noopener" class="rounded-lg border border-nvidia/40 bg-nvidia/10 px-4 py-2 text-xs font-semibold text-lime-300 transition hover:border-nvidia/70 hover:bg-nvidia/20">API Key Al →</a>
+      </div>
+      <button id="menu-btn" aria-label="Menüyü aç" class="grid h-10 w-10 place-items-center rounded-lg border border-white/10 text-zinc-300 md:hidden">
+        <svg id="menu-open-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+        <svg id="menu-close-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="hidden"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div id="mobile-menu" class="hidden border-t border-white/5 bg-ink/95 px-5 py-4 backdrop-blur-xl md:hidden">
+      <div class="flex flex-col gap-1 text-sm font-medium">
+        <a href="#kurulum" class="mobile-nav-link rounded-lg px-3 py-3 text-zinc-300 hover:bg-white/5 hover:text-zinc-100">Kurulum</a>
+        <a href="#katalog" class="mobile-nav-link rounded-lg px-3 py-3 text-zinc-300 hover:bg-white/5 hover:text-zinc-100">Katalog</a>
+        <a href="#benchmark" class="mobile-nav-link rounded-lg px-3 py-3 text-zinc-300 hover:bg-white/5 hover:text-zinc-100">Benchmarklar</a>
+        <a href="#limitler" class="mobile-nav-link rounded-lg px-3 py-3 text-zinc-300 hover:bg-white/5 hover:text-zinc-100">Limitler</a>
+        <a href="https://build.nvidia.com" target="_blank" rel="noopener" class="mt-2 rounded-lg border border-nvidia/40 bg-nvidia/10 px-3 py-3 text-center text-xs font-semibold text-lime-300">API Key Al →</a>
+      </div>
+    </div>
+  </nav>
+
+  <header class="relative overflow-hidden">
+    <div id="hero-grid" class="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.035)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.035)_1px,transparent_1px)] bg-[size:44px_44px] [mask-image:radial-gradient(ellipse_90%_70%_at_50%_0%,#000_55%,transparent_100%)] [-webkit-mask-image:radial-gradient(ellipse_90%_70%_at_50%_0%,#000_55%,transparent_100%)]"></div>
+    <div id="hero-orb-1" class="pointer-events-none absolute -left-40 top-10 h-96 w-96 rounded-full bg-nvidia/10 blur-3xl will-change-transform" aria-hidden="true"></div>
+    <div id="hero-orb-2" class="pointer-events-none absolute -right-32 top-40 h-80 w-80 rounded-full bg-violet-600/10 blur-3xl will-change-transform" aria-hidden="true"></div>
+
+    <div class="relative mx-auto grid max-w-6xl items-center gap-14 px-5 pb-20 pt-32 lg:grid-cols-2 lg:gap-10 lg:pb-28 lg:pt-40">
+      <div>
+        <div class="inline-flex items-center gap-2 rounded-full border border-nvidia/30 bg-nvidia/10 px-3.5 py-1.5 text-xs font-medium text-lime-300 opacity-0 translate-y-7" data-reveal="0">
+          <span class="relative flex h-2 w-2"><span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-lime-400 opacity-60"></span><span class="relative inline-flex h-2 w-2 rounded-full bg-lime-400"></span></span>
+          Bağımsız kişisel teknik proje — portföy çalışması
+        </div>
+        <div class="mt-6 font-mono text-xs uppercase tracking-[0.25em] text-nvidia opacity-0 translate-y-7" data-reveal="0.04">NIM LAB</div>
+        <h1 class="mt-3 text-3xl font-extrabold leading-[1.08] tracking-tight text-zinc-50 opacity-0 translate-y-7 sm:text-4xl lg:text-5xl" data-reveal="0.08">
+          NVIDIA NIM + OpenCode —<br class="hidden sm:block">
+          <span class="bg-[linear-gradient(92deg,#a3e635_0%,#76b900_45%,#22d3ee_100%)] bg-clip-text text-transparent">Model Research & Benchmark Explorer</span>
+        </h1>
+        <p class="mt-6 max-w-xl text-base leading-relaxed text-zinc-400 opacity-0 translate-y-7 sm:text-lg" data-reveal="0.16">
+          NVIDIA Build (NIM), açık ağırlıklı modelleri OpenAI uyumlu tek bir API'de sunuyor; OpenCode ile
+          terminalinden bağlanıyorsun. NIM Lab bu akışın kişisel araştırma sayfasıdır — pazarlama dili yok;
+          <span class="font-semibold text-zinc-200">her skor, kaynağı ve erişim tarihiyle</span> listelenen doğrulanmış veriler.
+        </p>
+        <div class="mt-9 flex flex-wrap items-center gap-4 opacity-0 translate-y-7" data-reveal="0.24">
+          <a id="cta-main" href="#kurulum" class="rounded-xl bg-[linear-gradient(110deg,#76b900_35%,#a3e635_50%,#76b900_65%)] bg-[length:200%_100%] px-6 py-3.5 text-sm font-bold text-black shadow-[0_8px_30px_-6px_rgba(118,185,0,.5)] transition-shadow will-change-transform hover:shadow-[0_8px_36px_-4px_rgba(163,230,53,.6)]">Kurulum Rehberi →</a>
+          <a href="#benchmark" class="rounded-xl border border-white/15 bg-white/[0.03] px-6 py-3.5 text-sm font-semibold text-zinc-200 transition-colors hover:border-white/30 hover:bg-white/[0.06]">Benchmark Verileri</a>
+        </div>
+        <div class="mt-12 grid grid-cols-2 gap-3 opacity-0 translate-y-7 sm:grid-cols-4" data-reveal="0.32">
+          <div class="rounded-xl border border-white/[0.07] bg-white/[0.02] px-4 py-3.5">
+            <div class="font-mono text-xl font-bold text-lime-300" data-count="3">0</div>
+            <div class="mt-0.5 text-xs text-zinc-500">adımda kurulum</div>
+          </div>
+          <div class="rounded-xl border border-white/[0.07] bg-white/[0.02] px-4 py-3.5">
+            <div class="font-mono text-xl font-bold text-lime-300" data-count="11">0</div>
+            <div class="mt-0.5 text-xs text-zinc-500">doğrulanmış NIM LLM'si</div>
+          </div>
+          <div class="rounded-xl border border-white/[0.07] bg-white/[0.02] px-4 py-3.5">
+            <div class="font-mono text-xl font-bold text-lime-300">~<span data-count="5">0</span> dk</div>
+            <div class="mt-0.5 text-xs text-zinc-500">ilk prompt'a kadar (tahmini)</div>
+          </div>
+          <div class="rounded-xl border border-white/[0.07] bg-white/[0.02] px-4 py-3.5">
+            <div class="font-mono text-xl font-bold text-lime-300"><span data-count="29">0</span></div>
+            <div class="mt-0.5 text-xs text-zinc-500">kaynaklı benchmark satırı</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="relative opacity-0 translate-y-7 [perspective:1200px] lg:justify-self-end" data-reveal="0.2">
+        <div class="pointer-events-none absolute -inset-4 -z-10 rounded-3xl bg-nvidia/10 blur-2xl" aria-hidden="true"></div>
+        <div id="term-tilt" class="will-change-transform">
+          <div class="code-block lift-card relative w-full max-w-xl overflow-hidden rounded-2xl border border-white/10 bg-panel/90 shadow-2xl backdrop-blur-md transition-colors hover:border-nvidia/40">
+            <div class="flex items-center justify-between border-b border-white/5 px-4 py-3">
+              <div class="flex items-center gap-2">
+                <span class="h-3 w-3 rounded-full bg-rose-500/70"></span>
+                <span class="h-3 w-3 rounded-full bg-amber-400/70"></span>
+                <span class="h-3 w-3 rounded-full bg-lime-400/70"></span>
+                <span class="ml-3 font-mono text-xs text-zinc-500">opencode — zsh</span>
+              </div>
+              <span class="rounded border border-nvidia/30 bg-nvidia/10 px-2 py-0.5 font-mono text-[10px] text-lime-300">nim lab</span>
+            </div>
+            <div id="term-body" class="min-h-[104px] p-5 font-mono text-[13px] leading-[1.9]"></div>
+          </div>
+        </div>
+        <p class="mt-4 max-w-xl text-center font-mono text-xs text-zinc-600 lg:text-left">
+          $ export NVIDIA_API_KEY=... — ilk satır bu. Gerisi aşağıda.
+        </p>
+      </div>
+    </div>
+  </header>
+
+  <section id="kurulum" class="scroll-mt-24 border-t border-white/5 bg-gradient-to-b from-white/[0.015] to-transparent py-24">
+    <div class="mx-auto max-w-6xl px-5">
+      <div class="max-w-2xl opacity-0 translate-y-7" data-reveal="0">
+        <div class="font-mono text-xs uppercase tracking-[0.25em] text-nvidia">01 — Kurulum Rehberi</div>
+        <div class="mt-3 h-px w-12 bg-gradient-to-r from-nvidia/70 to-transparent" aria-hidden="true"></div>
+        <h2 class="mt-4 text-3xl font-extrabold tracking-tight text-zinc-50 sm:text-4xl">
+          3 adımda NIM + OpenCode <span class="bg-[linear-gradient(92deg,#a3e635_0%,#76b900_45%,#22d3ee_100%)] bg-clip-text text-transparent">kurulumu</span>
+        </h2>
+        <p class="mt-4 text-zinc-400">
+          Toplam süre: yaklaşık 5 dakika (tahmini). Gerekenler: bir terminal, bir tarayıcı ve e-posta adresin.
+          Kredi kartı veya ödeme bilgisi gerekmez — NVIDIA API key almak için <span class="font-semibold text-zinc-200">telefon doğrulaması zorunludur</span>.
+        </p>
+      </div>
+
+      <div class="relative mt-16 space-y-10 before:absolute before:bottom-3 before:left-[27px] before:top-3 before:w-px before:bg-gradient-to-b before:from-nvidia/60 before:via-white/10 before:to-transparent">
+        <div class="relative pl-16 opacity-0 translate-y-7 sm:pl-20" data-reveal="0.05">
+          <div class="absolute left-0 top-0 grid h-14 w-14 place-items-center rounded-2xl border border-nvidia/30 bg-nvidia/10 font-mono text-sm font-bold text-lime-300 shadow-[0_0_24px_-6px_rgba(118,185,0,.4)] sm:h-16 sm:w-16 sm:text-base">
+            01
+          </div>
+          <div class="group rounded-2xl border border-white/[0.07] bg-white/[0.02] p-6 backdrop-blur transition-colors hover:border-nvidia/30 sm:p-8">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+              <div class="flex items-center gap-3">
+                <span class="grid h-10 w-10 place-items-center rounded-xl border border-white/10 bg-white/[0.03] text-lime-300">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21 2-9.6 9.6"/><circle cx="7.5" cy="15.5" r="5.5"/><path d="m15.5 7.5 3 3L22 7l-3-3"/></svg>
+                </span>
+                <h3 class="text-lg font-bold text-zinc-100 sm:text-xl">NVIDIA Build hesabı aç ve API Key al</h3>
+              </div>
+              <span class="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1 font-mono text-[11px] text-zinc-500">~2 dk</span>
+            </div>
+            <p class="mt-4 text-sm leading-relaxed text-zinc-400">
+              <a href="https://build.nvidia.com" target="_blank" rel="noopener" class="font-medium text-lime-300 underline decoration-nvidia/40 underline-offset-4 hover:decoration-lime-300">build.nvidia.com</a>
+              adresine git ve sağ üstten "Login" ile bir NVIDIA hesabı oluştur.
+              Ardından herhangi bir model sayfasına girip <span class="font-semibold text-zinc-200">"Get API Key"</span> düğmesine bas.
+            </p>
+            <div class="mt-5 rounded-xl border border-amber-400/25 bg-amber-400/[0.06] p-4">
+              <div class="flex items-start gap-3">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mt-0.5 shrink-0 text-amber-300"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+                <p class="text-sm leading-relaxed text-amber-200/80">
+                  Kredi kartı gerekmez <span class="font-semibold text-amber-200">ama telefon doğrulaması ZORUNLUDUR.</span>
+                  API key alabilmek için NVIDIA, numaranı SMS ile doğruluyor. Türkiye (<span class="font-mono">+90</span>) gibi bazı numaralarda
+                  doğrulama adımı sorun çıkabildiği görülüyor; doğrulama tamamlanamazsa NVIDIA forumundan manuel onay isteyebilirsin.
+                </p>
+              </div>
+            </div>
+            <ul class="mt-4 space-y-2 text-sm text-zinc-400">
+              <li class="flex items-start gap-2.5"><span class="mt-0.5 text-nvidia">→</span>API Key <code class="rounded bg-white/5 px-1.5 py-0.5 font-mono text-xs text-lime-300">nvapi-</code> önekiyle başlar; bir kez gösterilir, hemen kopyala.</li>
+            </ul>
+            <div class="code-block lift-card mt-6 overflow-hidden rounded-xl border border-white/10 bg-panel/90 backdrop-blur-md transition-colors hover:border-nvidia/40">
+              <div class="flex items-center justify-between border-b border-white/5 px-4 py-2.5">
+                <div class="flex items-center gap-2">
+                  <span class="h-2.5 w-2.5 rounded-full bg-zinc-700"></span>
+                  <span class="ml-2 font-mono text-xs text-zinc-500">api-key.txt</span>
+                </div>
+                <button class="copy-btn flex items-center gap-1.5 rounded-md border border-white/10 px-2.5 py-1 text-[11px] text-zinc-400 transition-colors hover:text-zinc-100">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+                  <span class="copy-label">Kopyala</span>
+                </button>
+              </div>
+              <pre class="overflow-x-auto p-4 font-mono text-[13px] leading-relaxed"><code><span class="text-lime-300">nvapi-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx</span><span class="text-zinc-500 italic">  ← kendi anahtarın</span></code></pre>
+            </div>
+            <p class="mt-4 flex items-center gap-2 text-xs text-zinc-500">
+              <span class="text-lime-400">✓</span> Anahtarı kaybedersen hesabından "Regenerate" ile kolayca yeni bir tane oluşturabilirsin.
+            </p>
+          </div>
+        </div>
+
+        <div class="relative pl-16 opacity-0 translate-y-7 sm:pl-20" data-reveal="0.12">
+          <div class="absolute left-0 top-0 grid h-14 w-14 place-items-center rounded-2xl border border-nvidia/30 bg-nvidia/10 font-mono text-sm font-bold text-lime-300 shadow-[0_0_24px_-6px_rgba(118,185,0,.4)] sm:h-16 sm:w-16 sm:text-base">
+            02
+          </div>
+          <div class="group rounded-2xl border border-white/[0.07] bg-white/[0.02] p-6 backdrop-blur transition-colors hover:border-nvidia/30 sm:p-8">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+              <div class="flex items-center gap-3">
+                <span class="grid h-10 w-10 place-items-center rounded-xl border border-white/10 bg-white/[0.03] text-lime-300">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m4 17 6-6-6-6"/><path d="M12 19h8"/></svg>
+                </span>
+                <h3 class="text-lg font-bold text-zinc-100 sm:text-xl">Anahtarı terminalde ortam değişkeni olarak tanıt</h3>
+              </div>
+              <span class="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1 font-mono text-[11px] text-zinc-500">~1 dk</span>
+            </div>
+            <p class="mt-4 text-sm leading-relaxed text-zinc-400">
+              Komut işletim sistemine göre değişir — aşağıdaki sekmelerden kendine uygun olanı seç.
+              macOS/Linux'ta <code class="rounded bg-white/5 px-1.5 py-0.5 font-mono text-xs text-lime-300">export NVIDIA_API_KEY='nvapi-...'</code>
+              ile tanımlayıp <span class="font-semibold text-zinc-200">.zshrc</span>'ye ekliyorsun; Windows'ta PowerShell ile
+              <code class="rounded bg-white/5 px-1.5 py-0.5 font-mono text-xs text-lime-300">setx</code> komutu kalıcı atama yapıyor.
+            </p>
+
+            <div class="mt-6">
+              <div class="flex rounded-xl border border-white/10 bg-white/[0.02] p-1 text-xs font-semibold">
+                <button data-os="nix" class="os-btn flex-1 rounded-lg bg-nvidia px-4 py-2 text-black transition-colors">macOS / Linux</button>
+                <button data-os="win" class="os-btn flex-1 rounded-lg px-4 py-2 text-zinc-400 transition-colors hover:text-zinc-100">Windows · PowerShell</button>
+              </div>
+
+              <div id="os-nix" class="os-panel code-block lift-card mt-4 overflow-hidden rounded-xl border border-white/10 bg-panel/90 backdrop-blur-md transition-colors hover:border-nvidia/40">
+                <div class="flex items-center justify-between border-b border-white/5 px-4 py-2.5">
+                  <div class="flex items-center gap-2">
+                    <span class="h-2.5 w-2.5 rounded-full bg-zinc-700"></span>
+                    <span class="ml-2 font-mono text-xs text-zinc-500">terminal — bash / zsh</span>
+                  </div>
+                  <button class="copy-btn flex items-center gap-1.5 rounded-md border border-white/10 px-2.5 py-1 text-[11px] text-zinc-400 transition-colors hover:text-zinc-100">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+                    <span class="copy-label">Kopyala</span>
+                  </button>
+                </div>
+                <pre class="overflow-x-auto p-4 font-mono text-[13px] leading-[1.9]"><code><span class="text-zinc-500 italic"># 1) Mevcut terminal oturumun için:</span>
+<span class="text-zinc-200">export</span> <span class="text-amber-400">NVIDIA_API_KEY</span>=<span class="text-lime-300">'nvapi-xxxxxxxxxxxxxxxxxxxxxxxx'</span>
+
+<span class="text-zinc-500 italic"># 2) Kalıcı olması için .zshrc'ye ekle, sonra yeniden yükle:</span>
+<span class="text-sky-300">echo</span> <span class="text-lime-300">"export NVIDIA_API_KEY='nvapi-xxxxxxxxxxxxxxxxxxxxxxxx'"</span> <span class="text-purple-400">>></span> ~/.zshrc
+<span class="text-sky-300">source</span> ~/.zshrc</code></pre>
+              </div>
+
+              <div id="os-win" class="os-panel code-block lift-card mt-4 hidden overflow-hidden rounded-xl border border-white/10 bg-panel/90 backdrop-blur-md transition-colors hover:border-nvidia/40">
+                <div class="flex items-center justify-between border-b border-white/5 px-4 py-2.5">
+                  <div class="flex items-center gap-2">
+                    <span class="h-2.5 w-2.5 rounded-full bg-zinc-700"></span>
+                    <span class="ml-2 font-mono text-xs text-zinc-500">powershell — windows</span>
+                  </div>
+                  <button class="copy-btn flex items-center gap-1.5 rounded-md border border-white/10 px-2.5 py-1 text-[11px] text-zinc-400 transition-colors hover:text-zinc-100">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+                    <span class="copy-label">Kopyala</span>
+                  </button>
+                </div>
+                <pre class="overflow-x-auto p-4 font-mono text-[13px] leading-[1.9]"><code><span class="text-zinc-500 italic"># 1) Kalıcı ortam değişkeni olarak ata (yeni pencerelerde geçerli):</span>
+<span class="text-zinc-200">setx</span> <span class="text-amber-400">NVIDIA_API_KEY</span> <span class="text-lime-300">'nvapi-xxxxxxxxxxxxxxxxxxxxxxxx'</span>
+
+<span class="text-zinc-500 italic"># 2) setx mevcut pencereyi etkilemez; pencereyi kapat,</span>
+<span class="text-zinc-500 italic">#    yeni bir PowerShell aç ve doğrula:</span>
+<span class="text-zinc-200">echo</span> <span class="text-amber-400">$env:NVIDIA_API_KEY</span></code></pre>
+              </div>
+            </div>
+
+            <p class="mt-4 flex items-start gap-2 text-xs leading-relaxed text-zinc-500">
+              <span class="mt-0.5 text-lime-400">✓</span>
+              <span>Anahtarını kimseyle paylaşma ve git deposuna commit etme — önüne düşen herkes senin NIM deneme kotanı kullanabilir.</span>
+            </p>
+          </div>
+        </div>
+
+        <div class="relative pl-16 opacity-0 translate-y-7 sm:pl-20" data-reveal="0.12">
+          <div class="absolute left-0 top-0 grid h-14 w-14 place-items-center rounded-2xl border border-nvidia/30 bg-nvidia/10 font-mono text-sm font-bold text-lime-300 shadow-[0_0_24px_-6px_rgba(118,185,0,.4)] sm:h-16 sm:w-16 sm:text-base">
+            03
+          </div>
+          <div class="group rounded-2xl border border-white/[0.07] bg-white/[0.02] p-6 backdrop-blur transition-colors hover:border-nvidia/30 sm:p-8">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+              <div class="flex items-center gap-3">
+                <span class="grid h-10 w-10 place-items-center rounded-xl border border-white/10 bg-white/[0.03] text-lime-300">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+                </span>
+                <h3 class="text-lg font-bold text-zinc-100 sm:text-xl">OpenCode'u kur ve modelini seç</h3>
+              </div>
+              <span class="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1 font-mono text-[11px] text-zinc-500">~2 dk</span>
+            </div>
+            <p class="mt-4 text-sm leading-relaxed text-zinc-400">
+              OpenCode'u kur, bir proje klasörüne gir ve <code class="rounded bg-white/5 px-1.5 py-0.5 font-mono text-xs text-lime-300">opencode</code>
+              komutuyla başlat. TUI içinde <code class="rounded bg-white/5 px-1.5 py-0.5 font-mono text-xs text-lime-300">/model</code> yazınca
+              NVIDIA sağlayıcısına ait modelleri filtreleyip seçebilirsin — hepsi bu.
+            </p>
+            <div class="code-block lift-card mt-6 overflow-hidden rounded-xl border border-white/10 bg-panel/90 backdrop-blur-md transition-colors hover:border-nvidia/40">
+              <div class="flex items-center justify-between border-b border-white/5 px-4 py-2.5">
+                <div class="flex items-center gap-2">
+                  <span class="h-2.5 w-2.5 rounded-full bg-zinc-700"></span>
+                  <span class="ml-2 font-mono text-xs text-zinc-500">terminal</span>
+                </div>
+                <button class="copy-btn flex items-center gap-1.5 rounded-md border border-white/10 px-2.5 py-1 text-[11px] text-zinc-400 transition-colors hover:text-zinc-100">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+                  <span class="copy-label">Kopyala</span>
+                </button>
+              </div>
+              <pre class="overflow-x-auto p-4 font-mono text-[13px] leading-[1.9]"><code><span class="text-zinc-200">curl</span> -fsSL https://opencode.ai/install <span class="text-purple-400">|</span> <span class="text-zinc-200">bash</span>
+<span class="text-zinc-200">mkdir</span> projem <span class="text-purple-400">&&</span> <span class="text-zinc-200">cd</span> projem
+<span class="text-zinc-200">opencode</span>  <span class="text-zinc-500 italic"># TUI açılır; /model ile NIM modelini seç</span>
+
+<span class="text-zinc-500 italic"># Hangi NVIDIA modellerinin listelendiğini TUI dışında görmek için:</span>
+<span class="text-zinc-200">opencode</span> models <span class="text-purple-400">|</span> <span class="text-zinc-200">grep</span> -i nvidia</code></pre>
+            </div>
+            <p class="mt-4 flex items-start gap-2 text-xs leading-relaxed text-zinc-500">
+              <span class="mt-0.5 text-lime-400">✓</span>
+              <span>Windows kullanıyorsan OpenCode kurulum paketi için <a href="https://opencode.ai" target="_blank" rel="noopener" class="font-medium text-lime-300 underline decoration-nvidia/40 underline-offset-4 hover:decoration-lime-300">opencode.ai</a>'ye bak; kurulumdan sonraki <span class="font-mono">/model</span> adımı her platformda aynı.</span>
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="katalog" class="scroll-mt-24 border-t border-white/5 bg-gradient-to-b from-white/[0.015] to-transparent py-24">
+    <div class="mx-auto max-w-6xl px-5">
+      <div class="max-w-2xl opacity-0 translate-y-7" data-reveal="0">
+        <div class="font-mono text-xs uppercase tracking-[0.25em] text-nvidia">02 — NIM Kataloğu</div>
+        <div class="mt-3 h-px w-12 bg-gradient-to-r from-nvidia/70 to-transparent" aria-hidden="true"></div>
+        <h2 class="mt-4 text-3xl font-extrabold tracking-tight text-zinc-50 sm:text-4xl">
+          Doğrulanmış <span class="bg-[linear-gradient(92deg,#a3e635_0%,#76b900_45%,#22d3ee_100%)] bg-clip-text text-transparent">NIM modelleri</span>
+        </h2>
+        <p class="mt-4 text-zinc-400">
+          <a href="https://build.nvidia.com/models" target="_blank" rel="noopener" class="font-medium text-lime-300 underline decoration-nvidia/40 underline-offset-4 hover:decoration-lime-300">build.nvidia.com/models</a>
+          kataloğunda yüzü aşkın servis var; burada yalnızca <span class="font-semibold text-zinc-200">metin odaklı LLM'ler</span> listeleniyor.
+          Her satırın NIM üzerinden sunulduğu, resmî model kartından tek tek doğrulandı (erişim: 10 Ekim 2026).
+        </p>
+      </div>
+
+      <div class="mt-8 rounded-2xl border border-cyan-400/20 bg-cyan-400/[0.04] p-5 opacity-0 translate-y-7" data-reveal="0.06">
+        <p class="text-sm leading-relaxed text-zinc-300">
+          <span class="font-semibold text-cyan-300">NIM erişimi ≠ OpenCode uyumluluğu ≠ benchmark skoru.</span>
+          Aşağıdaki 11 modelin NIM API'si üzerinden sunulması, bir benchmark sonucunun yayınlandığı veya OpenCode'ta her
+          senaryoda sorunsuz çalıştığı anlamına gelmez. Benchmark skorları <a href="#benchmark" class="font-medium text-lime-300 underline decoration-nvidia/40 underline-offset-4 hover:decoration-lime-300">03 numaralı bölümde</a>;
+          OpenCode kurulumu ise <a href="#kurulum" class="font-medium text-lime-300 underline decoration-nvidia/40 underline-offset-4 hover:decoration-lime-300">01'de</a> anlatılıyor.
+          Tool-calling ve reasoning davranışları modelden modele değişir.
+        </p>
+      </div>
+
+      <div id="catalog-wrap" class="mt-6 rounded-2xl bg-gradient-to-b from-white/[0.14] via-white/[0.05] to-transparent p-px opacity-0 translate-y-7" data-reveal="0.12">
+        <div class="overflow-hidden rounded-[15px] bg-ink/80 backdrop-blur-md">
+          <div class="hidden md:block">
+            <table class="w-full min-w-[720px] border-collapse text-left">
+              <thead>
+                <tr class="text-[11px] uppercase tracking-wider text-zinc-500">
+                  <th class="py-4 pl-6 pr-4 font-medium">Model</th>
+                  <th class="px-4 py-4 font-medium">Sağlayıcı</th>
+                  <th class="px-4 py-4 font-medium">Boyut</th>
+                  <th class="px-4 py-4 font-medium">Bağlam</th>
+                  <th class="px-4 py-4 font-medium">Girdi</th>
+                </tr>
+              </thead>
+              <tbody id="catalog-body" class="font-mono text-sm"></tbody>
+            </table>
+          </div>
+          <div id="catalog-cards" class="space-y-4 p-4 md:hidden"></div>
+          <div class="border-t border-white/5 px-6 py-4 text-xs text-zinc-500">
+            <span id="catalog-count">11</span> model listeleniyor · Katalog doğrulaması: 10.10.2026 ·
+            Tümü <span class="font-mono text-zinc-400">integrate.api.nvidia.com/v1</span> üzerinden OpenAI uyumlu chat/completions uç noktasıyla sunuluyor (model kartlarından doğrulandı).
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="benchmark" class="scroll-mt-24 py-24">
+    <div class="mx-auto max-w-6xl px-5">
+      <div class="max-w-2xl opacity-0 translate-y-7" data-reveal="0">
+        <div class="font-mono text-xs uppercase tracking-[0.25em] text-nvidia">03 — Benchmarklar</div>
+        <div class="mt-3 h-px w-12 bg-gradient-to-r from-nvidia/70 to-transparent" aria-hidden="true"></div>
+        <h2 class="mt-4 text-3xl font-extrabold tracking-tight text-zinc-50 sm:text-4xl">
+          Üç ayrı değerlendirme — <span class="bg-[linear-gradient(92deg,#a3e635_0%,#76b900_45%,#22d3ee_100%)] bg-clip-text text-transparent">kaynaklarıyla</span>
+        </h2>
+        <p class="mt-4 text-zinc-400">
+          Aşağıdaki üç blok birbirinden bağımsız benchmark aileleridir; <span class="font-semibold text-zinc-200">sayıları birbirine bağlanmaz</span>.
+          SWE-bench Verified, Terminal-Bench / DeepSWE ve Artificial Analysis Intelligence Index farklı görev kümeleri ve
+          farklı harness'ler kullanır.
+        </p>
+      </div>
+
+      <div class="mt-8 rounded-2xl border border-white/[0.07] bg-white/[0.02] p-6 opacity-0 translate-y-7" data-reveal="0.06">
+        <div class="grid gap-5 md:grid-cols-3">
+          <div>
+            <div class="font-mono text-xs font-bold text-lime-300">1 · GELİŞTİRİCİ ÖLÇÜMÜ</div>
+            <p class="mt-2 text-xs leading-relaxed text-zinc-400">Modeli üreten firmanın kendi yayınladığı sonuç: Z.ai duyuru tablosu, NVIDIA / DeepSeek / Meta / OpenAI model kartları. Bağımsız doğrulama yoktur.</p>
+          </div>
+          <div>
+            <div class="font-mono text-xs font-bold text-lime-300">2 · ÜÇÜNCÜ TART LİDER TABLO</div>
+            <p class="mt-2 text-xs leading-relaxed text-zinc-400">llm-stats'un topladığı SWE-bench Verified skorları (117 model). Skorların tamamı self-reported; sitede bağımsız doğrulanmış kayıt yok.</p>
+          </div>
+          <div>
+            <div class="font-mono text-xs font-bold text-lime-300">3 · BAĞIMSIZ DEĞERLENDİRME</div>
+            <p class="mt-2 text-xs leading-relaxed text-zinc-400">Artificial Analysis'ın kendi altyapısında ölçtüğü Intelligence Index ve hız/fiyat metrikleri.</p>
+          </div>
+        </div>
+        <p class="mt-5 border-t border-white/5 pt-4 text-xs leading-relaxed text-zinc-500">
+          Bu sayfadaki hiçbir skor NIM Lab tarafından yeniden ölçülmemiştir; tüm değerler genel kaynaklardan alınmıştır ve
+          kullanılan agent/harness mimarisine göre değişir. Tüm kaynak erişimleri: <span class="font-semibold text-zinc-400">10 Ekim 2026</span> ·
+          llm-stats son güncelleme: <span class="font-semibold text-zinc-400">9 Ekim 2026</span>.
+        </p>
+      </div>
+
+      <div class="mt-16">
+        <div class="max-w-2xl opacity-0 translate-y-7" data-reveal="0">
+          <div class="font-mono text-xs uppercase tracking-[0.25em] text-nvidia">03A — SWE-bench Verified</div>
+          <div class="mt-3 h-px w-12 bg-gradient-to-r from-nvidia/70 to-transparent" aria-hidden="true"></div>
+          <h3 class="mt-4 text-2xl font-extrabold leading-snug tracking-tight text-zinc-50 sm:text-3xl">
+            Kapalı kaynak, NIM ve açık referanslar <span class="bg-[linear-gradient(92deg,#a3e635_0%,#76b900_45%,#22d3ee_100%)] bg-clip-text text-transparent">(tek metrik)</span>
+          </h3>
+          <p class="mt-4 text-zinc-400">
+            SWE-bench Verified, modellerin gerçek Python repo'larındaki 500 insan doğrulamalı GitHub issue'ını patch
+            üreterek çözme oranını ölçer (bkz. <a href="https://www.swebench.com/" target="_blank" rel="noopener" class="font-medium text-lime-300 underline decoration-nvidia/40 underline-offset-4 hover:decoration-lime-300">swebench.com</a>).
+            "Kapalı kaynak" ve "açık referans" satırları llm-stats lider tablosundan; NIM satırları geliştiricilerin kendi
+            model kartlarından. Harness farkı sonucu değiştirir — örn. Nemotron-3-Super: OpenHands 60.5 / OpenCode 59.2 / Codex 53.7.
+          </p>
+        </div>
+
+        <div class="mt-8 flex flex-wrap items-center justify-between gap-4 opacity-0 translate-y-7" data-reveal="0.08">
+          <div class="flex flex-wrap items-center gap-4 text-xs text-zinc-500">
+            <span class="flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-400"></span>Kapalı kaynak</span>
+            <span class="flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-full bg-gradient-to-r from-nvidia to-lime-300"></span>NIM · ücretsiz deneme</span>
+            <span class="flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-full bg-gradient-to-r from-cyan-400 to-sky-300"></span>Açık referans · NIM'de yok</span>
+            <span class="flex items-center gap-2"><span class="text-amber-300">★</span>tablonun en yüksek skoru</span>
+          </div>
+          <div class="flex rounded-xl border border-white/10 bg-white/[0.02] p-1 text-xs font-semibold">
+            <button data-filter="all" class="filter-btn rounded-lg bg-nvidia px-4 py-2 text-black transition-colors">Tümü</button>
+            <button data-filter="closed" class="filter-btn rounded-lg px-4 py-2 text-zinc-400 transition-colors hover:text-zinc-100">Kapalı</button>
+            <button data-filter="nim" class="filter-btn rounded-lg px-4 py-2 text-zinc-400 transition-colors hover:text-zinc-100">NIM</button>
+            <button data-filter="ref" class="filter-btn rounded-lg px-4 py-2 text-zinc-400 transition-colors hover:text-zinc-100">Referans</button>
+          </div>
+        </div>
+
+        <div id="bench-a-wrap" class="mt-6 rounded-2xl bg-gradient-to-b from-white/[0.14] via-white/[0.05] to-transparent p-px opacity-0 translate-y-7" data-reveal="0.14">
+          <div class="overflow-hidden rounded-[15px] bg-ink/80 backdrop-blur-md">
+            <div class="hidden md:block">
+              <table class="w-full min-w-[620px] border-collapse text-left">
+                <thead>
+                  <tr class="text-[11px] uppercase tracking-wider text-zinc-500">
+                    <th class="py-4 pl-6 pr-4 font-medium">Model</th>
+                    <th class="px-4 py-4 font-medium">Erişim</th>
+                    <th id="th-score-a" title="Sıralamak için tıkla" class="cursor-pointer select-none px-4 py-4 font-medium transition-colors hover:text-zinc-200">SWE-bench Verified<span id="ind-a" class="ml-1 text-lime-300">↓</span></th>
+                  </tr>
+                </thead>
+                <tbody id="bench-body" class="font-mono text-sm"></tbody>
+              </table>
+            </div>
+            <div id="bench-cards" class="space-y-4 p-4 md:hidden"></div>
+            <div class="border-t border-white/5 px-6 py-4 text-xs text-zinc-500">
+              <span id="model-count">20</span> satır · Sıralama: skor (azalan) — başlığa tıklayarak değiştir.
+            </div>
+            <div class="border-t border-white/5 px-6 py-4 text-xs leading-relaxed text-zinc-500">
+              Not: <span class="font-mono">(SWC yayımlanmadı)</span> işaretli satırlar için hiçbir resmî kaynakta SWE-bench
+              Verified skoru yoktur; değer tahmin edilmez. Nemotron-3-Ultra NIM'de NVFP4 checkpoint sunar (BF16: 71.9).
+              Gemma 4 31B değeri, Meta'nın Muse Glimmer kartındaki rakip ölçümüdür. llm-stats: 117 model, tamamı
+              self-reported (bağımsız doğrulama yok) — erişim 10.10.2026. swebench.com resmî lider tablosu JS ile
+              yüklendiğinden per-model sayılar statik erişimde alınamadı; bu tablo llm-stats + model kartlarına dayanır.
+            </div>
+            <div class="border-t border-white/5 px-6 py-4 text-xs text-zinc-500">
+              <div class="flex flex-wrap items-center gap-x-6 gap-y-2">
+                <span class="flex flex-wrap items-center gap-1.5">
+                  <span class="font-semibold text-zinc-400">Lider tablo:</span>
+                  <a href="https://llm-stats.com/benchmarks/swe-bench-verified" target="_blank" rel="noopener" class="font-medium text-lime-300 underline decoration-nvidia/40 underline-offset-4 hover:decoration-lime-300">llm-stats.com</a>
+                  <span class="text-zinc-600">(son güncelleme 09.10.2026)</span>
+                </span>
+                <span class="flex flex-wrap items-center gap-1.5">
+                  <span class="font-semibold text-zinc-400">Benchmark:</span>
+                  <a href="https://www.swebench.com/" target="_blank" rel="noopener" class="font-medium text-lime-300 underline decoration-nvidia/40 underline-offset-4 hover:decoration-lime-300">swebench.com</a>
+                </span>
+                <span class="flex flex-wrap items-center gap-1.5">
+                  <span class="font-semibold text-zinc-400">Model kartları:</span>
+                  <a href="https://build.nvidia.com/models" target="_blank" rel="noopener" class="font-medium text-lime-300 underline decoration-nvidia/40 underline-offset-4 hover:decoration-lime-300">build.nvidia.com/models</a>
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-16">
+        <div class="max-w-2xl opacity-0 translate-y-7" data-reveal="0">
+          <div class="font-mono text-xs uppercase tracking-[0.25em] text-nvidia">03B — Z.ai GLM-5.3 duyurusu</div>
+          <div class="mt-3 h-px w-12 bg-gradient-to-r from-nvidia/70 to-transparent" aria-hidden="true"></div>
+          <h3 class="mt-4 text-2xl font-extrabold leading-snug tracking-tight text-zinc-50 sm:text-3xl">
+            DeepSWE v1.1 · Terminal-Bench 2.1 <span class="bg-[linear-gradient(92deg,#a3e635_0%,#76b900_45%,#22d3ee_100%)] bg-clip-text text-transparent">(03A ile KARŞILAŞTIRILAMAZ)</span>
+          </h3>
+          <p class="mt-4 text-zinc-400">
+            Kaynak: <a href="https://z.ai/blog/glm-5.3" target="_blank" rel="noopener" class="font-medium text-lime-300 underline decoration-nvidia/40 underline-offset-4 hover:decoration-lime-300">Z.ai GLM-5.3 duyuru tablosu</a>
+            (yayın: 14.08.2026 · erişim: 10.10.2026). Z.ai kendi seçtiği harness ve rakiplerle ölçtü; bağımsız doğrulama yok.
+            DeepSeek-V4.1-Flash satırı DeepSeek'in resmî HF kartından; Kimi K3 değerlerini Moonshot kartı da doğruluyor.
+            Z.ai ve Moonshot, GLM-5.3 / Kimi K3 / DeepSeek-V4.1-Flash için SWE-bench Verified yayınlamıyor.
+          </p>
+        </div>
+
+        <div class="mt-8 flex flex-wrap items-center justify-between gap-4 opacity-0 translate-y-7" data-reveal="0.08">
+          <div class="flex items-center gap-4 text-xs text-zinc-500">
+            <span class="flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-full bg-gradient-to-r from-nvidia to-lime-300"></span>NIM · ücretsiz deneme</span>
+            <span class="flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-400"></span>Ücretli / Referans</span>
+          </div>
+          <div class="flex rounded-xl border border-white/10 bg-white/[0.02] p-1 text-xs font-semibold">
+            <button data-filter-b="all" class="filter-btn-b rounded-lg bg-nvidia px-4 py-2 text-black transition-colors">Tümü</button>
+            <button data-filter-b="free" class="filter-btn-b rounded-lg px-4 py-2 text-zinc-400 transition-colors hover:text-zinc-100">NIM</button>
+            <button data-filter-b="ref" class="filter-btn-b rounded-lg px-4 py-2 text-zinc-400 transition-colors hover:text-zinc-100">Referans</button>
+          </div>
+        </div>
+
+        <div id="bench-b-wrap" class="mt-6 rounded-2xl bg-gradient-to-b from-white/[0.14] via-white/[0.05] to-transparent p-px opacity-0 translate-y-7" data-reveal="0.14">
+          <div class="overflow-hidden rounded-[15px] bg-ink/80 backdrop-blur-md">
+            <div class="hidden md:block">
+              <table class="w-full min-w-[760px] border-collapse text-left">
+                <thead>
+                  <tr class="text-[11px] uppercase tracking-wider text-zinc-500">
+                    <th class="py-4 pl-6 pr-4 font-medium">Model</th>
+                    <th class="px-4 py-4 font-medium">Erişim</th>
+                    <th id="th-ds-b" title="Sıralamak için tıkla" class="cursor-pointer select-none px-4 py-4 font-medium transition-colors hover:text-zinc-200">DeepSWE v1.1<span id="ind-ds" class="ml-1 text-lime-300">↓</span></th>
+                    <th id="th-tb-b" title="Sıralamak için tıkla" class="cursor-pointer select-none px-4 py-4 font-medium transition-colors hover:text-zinc-200">Terminal-Bench 2.1<span id="ind-tb" class="ml-1 text-zinc-600">↕</span></th>
+                  </tr>
+                </thead>
+                <tbody id="bench-body-b" class="font-mono text-sm"></tbody>
+              </table>
+            </div>
+            <div id="bench-cards-b" class="space-y-4 p-4 md:hidden"></div>
+            <div class="border-t border-white/5 px-6 py-4 text-xs text-zinc-500">
+              <span id="model-count-b">9</span> satır · Sıralama: DeepSWE v1.1 (azalan) — başlıklara tıklayarak değiştir.
+            </div>
+            <div class="border-t border-white/5 px-6 py-4">
+              <details class="group rounded-xl border border-white/10 bg-white/[0.02] px-5 py-4">
+                <summary class="cursor-pointer list-none text-sm font-semibold text-zinc-200 transition-colors hover:text-lime-300">
+                  Değerlendirme koşulları (Z.ai dipnotları) <span class="ml-1 text-xs font-normal text-zinc-500">— aç/kapat</span>
+                </summary>
+                <ul class="mt-3 space-y-1.5 text-xs leading-relaxed text-zinc-400">
+                  <li><span class="font-semibold text-lime-300">DeepSWE v1.1:</span> mini-swe-agent harness · temperature 0.95 · top_p 1.0 · 6 saat timeout · 400K bağlam</li>
+                  <li><span class="font-semibold text-lime-300">Terminal-Bench 2.1:</span> Claude Code 2.1.207 harness · temperature 1.0 · 6 saat timeout · 65.536 max_new_tokens</li>
+                  <li><span class="font-semibold text-lime-300">DeepSeek-V4.1-Flash satırı:</span> DeepSeek'in kendi kartı · mini-SWE harness (DeepSWE) · TB 2.1 ağ erişimi olmadan · maksimum reasoning çabası</li>
+                </ul>
+              </details>
+            </div>
+            <div class="border-t border-white/5 px-6 py-4 text-xs text-zinc-500">
+              <div class="flex flex-wrap items-center gap-x-6 gap-y-2">
+                <span class="flex flex-wrap items-center gap-1.5">
+                  <span class="font-semibold text-zinc-400">Kaynak (Z.ai duyurusu):</span>
+                  <a href="https://z.ai/blog/glm-5.3" target="_blank" rel="noopener" class="font-medium text-lime-300 underline decoration-nvidia/40 underline-offset-4 hover:decoration-lime-300">z.ai/blog/glm-5.3</a>
+                </span>
+                <span class="flex flex-wrap items-center gap-1.5">
+                  <span class="font-semibold text-zinc-400">DeepSeek-V4.1-Flash satırı:</span>
+                  <a href="https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash" target="_blank" rel="noopener" class="font-medium text-lime-300 underline decoration-nvidia/40 underline-offset-4 hover:decoration-lime-300">resmî model kartı (Hugging Face)</a>
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-16">
+        <div class="max-w-2xl opacity-0 translate-y-7" data-reveal="0">
+          <div class="font-mono text-xs uppercase tracking-[0.25em] text-nvidia">03C — Bağımsız değerlendirme</div>
+          <div class="mt-3 h-px w-12 bg-gradient-to-r from-nvidia/70 to-transparent" aria-hidden="true"></div>
+          <h3 class="mt-4 text-2xl font-extrabold leading-snug tracking-tight text-zinc-50 sm:text-3xl">
+            Artificial Analysis · DeepSeek V4.1 Flash <span class="bg-[linear-gradient(92deg,#a3e635_0%,#76b900_45%,#22d3ee_100%)] bg-clip-text text-transparent">(max)</span>
+          </h3>
+          <p class="mt-4 text-zinc-400">
+            AA Intelligence Index v4.3.2, 10 değerlemeden oluşan bileşik bir endekstir (AA-Briefcase v1.1, GDPval-AA v2.1,
+            AutomationBench-AA, Terminal-Bench 4.0, SciCode, HLE, GDP.pdf, CritPt, AA-Omniscience, AA-LCR v1.1).
+            Metodoloji SWE-bench'ten ve Z.ai tablosundan tamamen farklıdır — <span class="font-semibold text-zinc-200">bu sayılar diğer tablolarla kıyaslanamaz</span>.
+            Erişim: 10.10.2026.
+          </p>
+        </div>
+
+        <div class="mt-8 grid gap-4 opacity-0 translate-y-7 sm:grid-cols-2 lg:grid-cols-4" data-reveal="0.1">
+          <div class="lift-card rounded-2xl border border-white/[0.07] bg-white/[0.02] p-6">
+            <div class="font-sans text-[10px] uppercase tracking-wider text-zinc-500">AA Intelligence Index v4.3.2</div>
+            <div class="mt-2 font-mono text-2xl font-bold text-lime-300">39</div>
+            <div class="mt-1 font-sans text-[11px] leading-relaxed text-zinc-500">sınıf sırası #7/117 · sınıf medyanı 18</div>
+          </div>
+          <div class="lift-card rounded-2xl border border-white/[0.07] bg-white/[0.02] p-6">
+            <div class="font-sans text-[10px] uppercase tracking-wider text-zinc-500">Çıktı hızı</div>
+            <div class="mt-2 font-mono text-2xl font-bold text-lime-300">219.7</div>
+            <div class="mt-1 font-sans text-[11px] leading-relaxed text-zinc-500">token/sn · DeepSeek API · sınıf medyanı ~70</div>
+          </div>
+          <div class="lift-card rounded-2xl border border-white/[0.07] bg-white/[0.02] p-6">
+            <div class="font-sans text-[10px] uppercase tracking-wider text-zinc-500">İlk token gecikmesi</div>
+            <div class="mt-2 font-mono text-2xl font-bold text-lime-300">1.05 s</div>
+            <div class="mt-1 font-sans text-[11px] leading-relaxed text-zinc-500">TTFT · sınıf medyanı 2.31 s</div>
+          </div>
+          <div class="lift-card rounded-2xl border border-white/[0.07] bg-white/[0.02] p-6">
+            <div class="font-sans text-[10px] uppercase tracking-wider text-zinc-500">Fiyat (1M token)</div>
+            <div class="mt-2 font-mono text-2xl font-bold text-lime-300">$0.30 / $1.20</div>
+            <div class="mt-1 font-sans text-[11px] leading-relaxed text-zinc-500">girdi / çıktı · karışım $0.18 · DeepSeek API</div>
+          </div>
+        </div>
+
+        <div class="mt-4 rounded-xl border border-white/[0.07] bg-white/[0.02] px-5 py-4 text-xs leading-relaxed text-zinc-500 opacity-0 translate-y-7" data-reveal="0.14">
+          Not: Hız, gecikme ve fiyat ölçümleri DeepSeek'in kendi API'si üzerinden yapılmıştır (NIM deneme erişimi bu
+          metriklerde kullanılmamıştır). AA'da ayrıca Engineering Capability Index yayımlanır; sayısal değeri statik
+          erişimde doğrulanamadığı için burada tekrarlanmıyor — güncel grafik için AA sayfasına bakın.
+        </div>
+
+        <div class="mt-4 flex flex-wrap items-center gap-x-6 gap-y-2 rounded-xl border border-white/[0.07] bg-white/[0.02] px-5 py-4 text-xs text-zinc-500 opacity-0 translate-y-7" data-reveal="0.16">
+          <span class="flex flex-wrap items-center gap-1.5">
+            <span class="font-semibold text-zinc-400">Bağımsız değerlendirme:</span>
+            <a href="https://artificialanalysis.ai/models/deepseek-v4-1-flash" target="_blank" rel="noopener" class="font-medium text-lime-300 underline decoration-nvidia/40 underline-offset-4 hover:decoration-lime-300">artificialanalysis.ai/models/deepseek-v4-1-flash</a>
+            <span class="text-zinc-600">(erişim: 10.10.2026)</span>
+          </span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="limitler" class="scroll-mt-24 border-t border-white/5 bg-gradient-to-b from-white/[0.015] to-transparent py-24">
+    <div class="mx-auto max-w-6xl px-5">
+      <div class="max-w-2xl opacity-0 translate-y-7" data-reveal="0">
+        <div class="font-mono text-xs uppercase tracking-[0.25em] text-nvidia">04 — Sınırlar ve Limitler</div>
+        <div class="mt-3 h-px w-12 bg-gradient-to-r from-nvidia/70 to-transparent" aria-hidden="true"></div>
+        <h2 class="mt-4 text-3xl font-extrabold tracking-tight text-zinc-50 sm:text-4xl">
+          Ücretsiz erişimin <span class="bg-[linear-gradient(92deg,#a3e635_0%,#76b900_45%,#22d3ee_100%)] bg-clip-text text-transparent">sınırları</span>
+        </h2>
+        <div class="mt-6 rounded-xl border border-nvidia/25 bg-nvidia/[0.06] p-4 text-sm leading-relaxed text-zinc-300">
+          NVIDIA, geliştiricilere <a href="https://assets.ngc.nvidia.com/products/api-catalog/legal/NVIDIA%20API%20Trial%20Terms%20of%20Service.pdf" target="_blank" rel="noopener" class="font-medium text-lime-300 underline decoration-nvidia/40 underline-offset-4 hover:decoration-lime-300">API Trial Terms</a>
+          kapsamında sınırlı, kredi bazlı ücretsiz deneme erişimi sunuyor. Sabit limit sayıları şartlarda yayınlanmıyor —
+          bu bölüm neyin doğrulanabileceğini ve neyin doğrulanamadığını açıkça işaretliyor.
+        </div>
+      </div>
+      <div class="mt-12 grid gap-5 md:grid-cols-3">
+        <div class="lift-card group rounded-2xl border border-white/[0.07] bg-white/[0.02] p-7 backdrop-blur transition-colors hover:border-nvidia/30 opacity-0 translate-y-7" data-reveal="0.05">
+          <span class="grid h-11 w-11 place-items-center rounded-xl border border-nvidia/30 bg-nvidia/10 text-lime-300 transition-transform group-hover:scale-110">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/></svg>
+          </span>
+          <h3 class="mt-5 text-lg font-bold text-zinc-100">NVIDIA NIM nedir?</h3>
+          <p class="mt-3 text-sm leading-relaxed text-zinc-400">
+            NVIDIA, üçüncü taraf açık ağırlıklı modelleri kendi altyapısında host eder ve OpenAI uyumlu tek bir API
+            (<span class="font-mono text-xs text-lime-300">integrate.api.nvidia.com/v1</span>) ile sunar. Amaç modelleri
+            geliştiricilere tanıtmak; yoğun üretim yükü taşıyan bir hizmet olarak tasarlanmamıştır. Bu projede 11 metin
+            LLM'si katalog üzerinden doğrulandı (erişim: 10.10.2026).
+          </p>
+        </div>
+        <div class="lift-card group rounded-2xl border border-white/[0.07] bg-white/[0.02] p-7 backdrop-blur transition-colors hover:border-nvidia/30 opacity-0 translate-y-7" data-reveal="0.15">
+          <span class="grid h-11 w-11 place-items-center rounded-xl border border-nvidia/30 bg-nvidia/10 text-lime-300 transition-transform group-hover:scale-110">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+          </span>
+          <h3 class="mt-5 flex flex-wrap items-center gap-2 text-lg font-bold text-zinc-100">
+            Limitler nereden doğrulanır?
+            <span class="rounded-full border border-amber-400/30 bg-amber-400/10 px-2.5 py-0.5 font-mono text-[10px] font-bold text-amber-300">40 RPM · DOĞRULANAMADI</span>
+          </h3>
+          <p class="mt-3 text-sm leading-relaxed text-zinc-400">
+            API Trial Terms, kullanımı "NVIDIA tarafından tanımlanan kullanım limitleri"ne ve deneme kredilerine bağlıyor;
+            şartlarda sabit bir istek/dakika (RPM) sayısı yayınlanmıyor. Topluluk yazılarında sıkça "40 RPM" geçer —
+            <span class="font-semibold text-zinc-200">bu sayı bu projede doğrulanamadı</span>. Güncel kotanı NVIDIA
+            panelindeki kullanım ekranından ve API yanıtlarındaki limit header'larından izleyebilirsin; limit hatası
+            alırsan kısa bir mola ver.
+          </p>
+        </div>
+        <div class="lift-card group rounded-2xl border border-white/[0.07] bg-white/[0.02] p-7 backdrop-blur transition-colors hover:border-nvidia/30 opacity-0 translate-y-7" data-reveal="0.25">
+          <span class="grid h-11 w-11 place-items-center rounded-xl border border-nvidia/30 bg-nvidia/10 text-lime-300 transition-transform group-hover:scale-110">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m4 17 6-6-6-6"/><path d="M12 19h8"/></svg>
+          </span>
+          <h3 class="mt-5 text-lg font-bold text-zinc-100">OpenCode'un rolü ne?</h3>
+          <p class="mt-3 text-sm leading-relaxed text-zinc-400">
+            OpenCode, terminalde çalışan açık kaynak bir kod asistanı. <span class="font-mono text-xs text-lime-300">NVIDIA_API_KEY</span>
+            tanımlıysa NIM modellerini listeler, <span class="font-mono text-xs text-lime-300">/model</span> ile seçersin.
+            NIM erişimi (sunucu tarafı) ile OpenCode yapılandırması (istemci tarafı) ayrı konulardır: bir modelin katalogda
+            olması, OpenCode'ta her senaryoda sorunsuz çalışacağını garanti etmez — tool-calling ve reasoning davranışları
+            modele göre değişir. Karşındaki şey "bedava sınırsız abonelik" değil; limitleriyle birlikte gerçek bir deneme erişimi.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="border-t border-white/5 py-12">
+    <div class="mx-auto flex max-w-6xl flex-col gap-8 px-5 lg:flex-row lg:items-start lg:justify-between">
+      <div class="max-w-md">
+        <div class="flex items-center gap-2.5">
+          <span class="grid h-7 w-7 place-items-center rounded-md border border-nvidia/40 bg-nvidia/10 font-mono text-xs font-bold text-lime-300">>_</span>
+          <span class="text-sm font-bold text-zinc-100">NIM<span class="text-nvidia">Lab</span></span>
+          <span class="font-mono text-[10px] text-zinc-500">NVIDIA NIM + OpenCode: Model Research & Benchmark Explorer</span>
+        </div>
+        <p class="mt-4 text-xs leading-relaxed text-zinc-600">
+          NIM Lab bağımsız bir kişisel teknik projedir (portföy çalışması); NVIDIA, OpenCode, Z.ai, DeepSeek, Moonshot,
+          Meta, Google veya diğer model sağlayıcılarıyla resmî bir bağlantısı yoktur. Sayfadaki hiçbir benchmark sonucu
+          bu proje tarafından ölçülmemiştir — tüm değerler kaynakları ve erişim tarihleriyle listelenen genel verilerdir;
+          skorlar kullanılan agent/harness mimarisine göre değişir. Kopyala, incele, geliştir.
+        </p>
+      </div>
+      <div class="flex flex-col gap-6">
+        <div class="flex flex-wrap gap-x-8 gap-y-3 text-xs font-medium text-zinc-400">
+          <a href="#kurulum" class="transition-colors hover:text-lime-300">Kurulum</a>
+          <a href="#katalog" class="transition-colors hover:text-lime-300">Katalog</a>
+          <a href="#benchmark" class="transition-colors hover:text-lime-300">Benchmarklar</a>
+          <a href="#limitler" class="transition-colors hover:text-lime-300">Limitler</a>
+          <a href="https://build.nvidia.com" target="_blank" rel="noopener" class="transition-colors hover:text-lime-300">build.nvidia.com</a>
+          <a href="https://opencode.ai" target="_blank" rel="noopener" class="transition-colors hover:text-lime-300">opencode.ai</a>
+        </div>
+        <div class="text-xs text-zinc-500">
+          <div class="font-semibold text-zinc-400">Kaynaklar (erişim: 10 Ekim 2026):</div>
+          <div class="mt-2 flex max-w-xl flex-col gap-1.5">
+            <a href="https://z.ai/blog/glm-5.3" target="_blank" rel="noopener" class="transition-colors hover:text-lime-300">Z.ai GLM-5.3 duyurusu — yayın: 14.08.2026 · z.ai/blog/glm-5.3</a>
+            <a href="https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash" target="_blank" rel="noopener" class="transition-colors hover:text-lime-300">DeepSeek-V4.1-Flash resmî model kartı — huggingface.co</a>
+            <a href="https://artificialanalysis.ai/models/deepseek-v4-1-flash" target="_blank" rel="noopener" class="transition-colors hover:text-lime-300">Artificial Analysis — DeepSeek V4.1 Flash · bağımsız değerlendirme</a>
+            <a href="https://llm-stats.com/benchmarks/swe-bench-verified" target="_blank" rel="noopener" class="transition-colors hover:text-lime-300">llm-stats — SWE-bench Verified (son güncelleme: 09.10.2026)</a>
+            <a href="https://www.swebench.com/" target="_blank" rel="noopener" class="transition-colors hover:text-lime-300">SWE-bench resmî sitesi — swebench.com</a>
+            <a href="https://build.nvidia.com/models" target="_blank" rel="noopener" class="transition-colors hover:text-lime-300">NVIDIA NIM kataloğu ve model sayfaları — build.nvidia.com/models</a>
+            <a href="https://assets.ngc.nvidia.com/products/api-catalog/legal/NVIDIA%20API%20Trial%20Terms%20of%20Service.pdf" target="_blank" rel="noopener" class="transition-colors hover:text-lime-300">NVIDIA API Trial Terms (PDF)</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    (() => {
+      'use strict';
+      const M = window.Motion || null;
+      const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const animate = M ? M.animate.bind(M) : null;
+      const scrollFn = M ? M.scroll.bind(M) : null;
+      const inView = M ? M.inView.bind(M) : null;
+      const stagger = M ? M.stagger.bind(M) : null;
+      const EASE = [0.22, 1, 0.36, 1];
+
+      document.documentElement.style.colorScheme = 'dark';
+
+      const showAllStatic = () => {
+        document.querySelectorAll('[data-reveal]').forEach(el => { el.style.opacity = '1'; el.style.transform = 'none'; });
+        document.querySelectorAll('[data-count]').forEach(el => { el.textContent = el.dataset.count; });
+      };
+      if (!M || reduced) showAllStatic();
+
+      const LLS = 'https://llm-stats.com/benchmarks/swe-bench-verified';
+      const ZAI = 'https://z.ai/blog/glm-5.3';
+      const HFD = 'https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash';
+      const NP = {
+        ds: 'https://build.nvidia.com/deepseek-ai/deepseek-v4.1-flash',
+        glm: 'https://build.nvidia.com/z-ai/glm-5-3',
+        glmf: 'https://build.nvidia.com/z-ai/glm-5-3-flash',
+        kimi: 'https://build.nvidia.com/moonshotai/kimi-k3',
+        laguna: 'https://build.nvidia.com/poolside/laguna-xs-2.1',
+        super: 'https://build.nvidia.com/nvidia/nemotron-3-super-120b-a12b',
+        ultra: 'https://build.nvidia.com/nvidia/nemotron-3-ultra-550b-a55b',
+        lightning: 'https://build.nvidia.com/nvidia/nemotron-3.5-lightning-30b-a3b',
+        gptoss: 'https://build.nvidia.com/openai/gpt-oss-20b',
+        gemma: 'https://build.nvidia.com/google/gemma-4-31b-it',
+        muse: 'https://build.nvidia.com/meta/muse-glimmer-30b',
+      };
+
+      const CATALOG = [
+        { name: 'DeepSeek-V4.1-Flash', vendor: 'DeepSeek', size: '552B (8–16B aktif)', ctx: '1M', modality: 'Metin + Görsel', url: NP.ds },
+        { name: 'GLM-5.3', vendor: 'Z.ai', size: '753B (~40B aktif)', ctx: '1M', modality: 'Metin', url: NP.glm },
+        { name: 'GLM-5.3-Flash', vendor: 'Z.ai', size: '320B (18B aktif)', ctx: '1M', modality: 'Metin + Görsel', url: NP.glmf },
+        { name: 'Kimi K3', vendor: 'Moonshot AI', size: '2.8T (104B aktif)', ctx: '1M', modality: 'Metin + Görsel', url: NP.kimi },
+        { name: 'Laguna XS 2.1', vendor: 'Poolside', size: '33B (3B aktif)', ctx: '262K', modality: 'Metin', url: NP.laguna },
+        { name: 'Nemotron-3-Super 120B-A12B', vendor: 'NVIDIA', size: '120B (12B aktif)', ctx: '1M', modality: 'Metin', url: NP.super },
+        { name: 'Nemotron-3-Ultra 550B-A55B', vendor: 'NVIDIA', size: '550B (55B aktif)', ctx: '1M', modality: 'Metin', url: NP.ultra },
+        { name: 'Nemotron-3.5-Lightning 30B-A3B', vendor: 'NVIDIA', size: '30B (3B aktif)', ctx: '1M', modality: 'Metin', url: NP.lightning },
+        { name: 'GPT-OSS-20B', vendor: 'OpenAI', size: '21B (~4B aktif)', ctx: '128K', modality: 'Metin', url: NP.gptoss },
+        { name: 'Gemma 4 31B IT', vendor: 'Google', size: '31B (yoğun)', ctx: '256K', modality: 'Metin + Görsel + Video', url: NP.gemma },
+        { name: 'Muse Glimmer 30B', vendor: 'Meta', size: '30B (yoğun)', ctx: '131K', modality: 'Metin + Görsel', url: NP.muse },
+      ];
+
+      const SWC = [
+        { name: 'Claude Fable 5', vendor: 'Anthropic', group: 'closed', score: 95.0, src: 'llm-stats', srcUrl: LLS, note: null },
+        { name: 'Claude Opus 4.8', vendor: 'Anthropic', group: 'closed', score: 88.6, src: 'llm-stats', srcUrl: LLS, note: null },
+        { name: 'Claude Sonnet 5', vendor: 'Anthropic', group: 'closed', score: 85.2, src: 'llm-stats', srcUrl: LLS, note: null },
+        { name: 'Claude Opus 4.5 (20251101)', vendor: 'Anthropic', group: 'closed', score: 80.9, src: 'llm-stats', srcUrl: LLS, note: null },
+        { name: 'Gemini 3.1 Pro (preview)', vendor: 'Google', group: 'closed', score: 80.6, src: 'llm-stats', srcUrl: LLS, note: null },
+        { name: 'GPT-5.2 (2025-12-11)', vendor: 'OpenAI', group: 'closed', score: 80.0, src: 'llm-stats', srcUrl: LLS, note: null },
+        { name: 'Muse Glimmer 30B', vendor: 'Meta · NIM', group: 'nim', score: 76.0, src: 'Meta model kartı', srcUrl: NP.muse, note: 'llm-stats: 76.0 ile uyumlu' },
+        { name: 'Laguna XS 2.1', vendor: 'Poolside · NIM', group: 'nim', score: 70.9, src: 'Poolside model kartı', srcUrl: NP.laguna, note: 'pass@1 ort. · 4 deneme' },
+        { name: 'Nemotron-3-Ultra 550B-A55B', vendor: 'NVIDIA · NIM', group: 'nim', score: 69.7, src: 'NVIDIA model kartı', srcUrl: NP.ultra, note: 'NIM NVFP4 · BF16: 71.9' },
+        { name: 'Gemma 4 31B IT', vendor: 'Google · NIM', group: 'nim', score: 66.6, src: 'Meta kartı (rakip ölçümü)', srcUrl: NP.muse, note: null },
+        { name: 'GPT-OSS-20B', vendor: 'OpenAI · NIM', group: 'nim', score: 60.7, src: 'OpenAI model kartı', srcUrl: NP.gptoss, note: 'high reasoning seviyesi' },
+        { name: 'Nemotron-3-Super 120B-A12B', vendor: 'NVIDIA · NIM', group: 'nim', score: 60.5, src: 'NVIDIA model kartı', srcUrl: NP.super, note: 'OpenHands harness · OpenCode: 59.2' },
+        { name: 'Nemotron-3.5-Lightning 30B-A3B', vendor: 'NVIDIA · NIM', group: 'nim', score: 52.8, src: 'NVIDIA model kartı', srcUrl: NP.lightning, note: 'NIM NVFP4 · BF16: 51.6' },
+        { name: 'DeepSeek-V4.1-Flash', vendor: 'DeepSeek · NIM', group: 'nim', score: null, src: 'NIM katalog sayfası', srcUrl: NP.ds, note: null },
+        { name: 'GLM-5.3', vendor: 'Z.ai · NIM', group: 'nim', score: null, src: 'NIM katalog sayfası', srcUrl: NP.glm, note: null },
+        { name: 'GLM-5.3-Flash', vendor: 'Z.ai · NIM', group: 'nim', score: null, src: 'NIM katalog sayfası', srcUrl: NP.glmf, note: null },
+        { name: 'Kimi K3', vendor: 'Moonshot AI · NIM', group: 'nim', score: null, src: 'NIM katalog sayfası', srcUrl: NP.kimi, note: null },
+        { name: 'DeepSeek-V4-Pro-Max', vendor: 'DeepSeek · NIM dışı', group: 'ref', score: 80.6, src: 'llm-stats', srcUrl: LLS, note: 'liderdeki #1 açık ağırlıklı model' },
+        { name: 'Kimi K2.6', vendor: 'Moonshot AI · NIM dışı', group: 'ref', score: 80.2, src: 'llm-stats', srcUrl: LLS, note: null },
+        { name: 'GLM-5', vendor: 'Z.ai · NIM dışı', group: 'ref', score: 77.8, src: 'llm-stats', srcUrl: LLS, note: null },
+      ];
+
+      const MODELS_B = [
+        { name: 'DeepSeek-V4.1-Flash', vendor: 'DeepSeek · NIM', type: 'free', access: 'NIM · ücretsiz deneme', deepswe: 74.2, tbench: 90.6, src: 'DeepSeek HF kartı', srcUrl: HFD, note: 'mini-SWE harness · maks. reasoning' },
+        { name: 'GPT-5.6 Sol', vendor: 'OpenAI', type: 'ref', access: 'Ücretli (referans)', deepswe: 72.7, tbench: 88.8, src: 'Z.ai ölçümü', srcUrl: ZAI, note: null },
+        { name: 'Claude Fable 5 (w/ fallback)', vendor: 'Anthropic', type: 'ref', access: 'Ücretli (referans)', deepswe: 69.7, tbench: 88.0, src: 'Z.ai ölçümü', srcUrl: ZAI, note: null },
+        { name: 'Kimi K3', vendor: 'Moonshot AI · NIM', type: 'free', access: 'NIM · ücretsiz deneme', deepswe: 67.5, tbench: 88.3, src: 'Z.ai ölçümü', srcUrl: ZAI, note: 'Moonshot kartı aynı değerleri doğruluyor' },
+        { name: 'GLM-5.3', vendor: 'Z.ai · NIM', type: 'free', access: 'NIM · ücretsiz deneme', deepswe: 66.9, tbench: 88.2, src: 'Z.ai ölçümü', srcUrl: ZAI, note: null },
+        { name: 'DeepSeek-V4 Pro-0813', vendor: 'DeepSeek', type: 'ref', access: "Referans · NIM'de yok", deepswe: 62.7, tbench: 87.9, src: 'Z.ai ölçümü', srcUrl: ZAI, note: null },
+        { name: 'Claude Opus 4.8', vendor: 'Anthropic', type: 'ref', access: 'Ücretli (referans)', deepswe: 58.0, tbench: 85.0, src: 'Z.ai ölçümü', srcUrl: ZAI, note: null },
+        { name: 'Qwen3.8-Max', vendor: 'Alibaba · Qwen', type: 'ref', access: 'Ücretli · referans', deepswe: 56.6, tbench: 86.6, src: 'Z.ai ölçümü', srcUrl: ZAI, note: null },
+        { name: 'GLM-5.2', vendor: 'Z.ai · önceki sürüm', type: 'ref', access: 'Referans (önceki sürüm)', deepswe: 46.2, tbench: 81.0, src: 'Z.ai ölçümü', srcUrl: ZAI, note: null },
+      ];
+
+      const BEST = Math.max(...SWC.filter(m => m.score !== null).map(m => m.score));
+      let sortA = 'desc';
+      let sortB = { key: 'deepswe', dir: 'desc' };
+      let curA = 'all', curB = 'all';
+
+      const star = cond => cond ? ' <span class="text-amber-300">★</span>' : '';
+
+      const sortList = (arr, key, dir) => [...arr].sort((x, y) => {
+        const a = x[key], b = y[key];
+        if (a === null && b === null) return 0;
+        if (a === null) return 1;
+        if (b === null) return -1;
+        return dir === 'desc' ? b - a : a - b;
+      });
+
+      const srcLink = m => `<a href="${m.srcUrl}" target="_blank" rel="noopener" class="inline-flex items-center gap-1 text-[10px] text-zinc-500 underline decoration-white/20 underline-offset-2 transition-colors hover:text-lime-300 hover:decoration-lime-300/50">${m.src} ↗</a>`;
+
+      const badgeA = m => {
+        if (m.group === 'nim') return '<span class="inline-flex items-center gap-1.5 rounded-full border border-nvidia/40 bg-nvidia/10 px-2.5 py-1 font-sans text-[10px] font-bold tracking-wide text-lime-300">NIM · DENEYE ÜCRETSİZ</span>';
+        if (m.group === 'ref') return '<span class="inline-flex items-center gap-1.5 rounded-full border border-cyan-400/30 bg-cyan-400/10 px-2.5 py-1 font-sans text-[10px] font-bold tracking-wide text-cyan-300">AÇIK · NIM DIŞI</span>';
+        return '<span class="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-2.5 py-1 font-sans text-[10px] font-bold tracking-wide text-zinc-400">KAPALI KAYNAK</span>';
+      };
+
+      const badgeB = m => m.type === 'free'
+        ? '<span class="inline-flex items-center gap-1.5 rounded-full border border-nvidia/40 bg-nvidia/10 px-2.5 py-1 font-sans text-[10px] font-bold tracking-wide text-lime-300">NIM · DENEYE ÜCRETSİZ</span>'
+        : `<span class="inline-flex items-center rounded-full border border-white/10 bg-white/5 px-2.5 py-1 font-sans text-[10px] font-bold tracking-wide text-zinc-400">${m.access}</span>`;
+
+      const gradA = m => m.group === 'nim' ? 'from-nvidia/70 to-lime-300' : m.group === 'ref' ? 'from-cyan-400/70 to-sky-300' : 'from-violet-500/70 to-fuchsia-400';
+
+      const barA = m => {
+        if (m.score === null) {
+          return `
+            <div class="flex items-center gap-2.5">
+              <div class="h-1.5 w-28 shrink-0 rounded-full border border-dashed border-white/15"></div>
+              <span class="text-xs italic text-zinc-500">(SWC yayımlanmadı)</span>
+            </div>`;
+        }
+        const isBest = m.score === BEST;
+        const glow = isBest ? 'shadow-[0_0_12px_rgba(163,230,53,.45)]' : '';
+        const textCls = isBest ? 'font-bold text-lime-300' : 'text-zinc-300';
+        const noteHtml = m.note ? `<span class="mt-0.5 block text-[10px] italic leading-snug text-zinc-600">${m.note}</span>` : '';
+        return `
+          <div>
+            <div class="flex items-center gap-2.5">
+              <div class="h-1.5 w-28 shrink-0 overflow-hidden rounded-full bg-white/[0.06]">
+                <div class="bar-fill h-full rounded-full bg-gradient-to-r ${gradA(m)} ${glow}" data-target="${m.score}" style="width:0%"></div>
+              </div>
+              <span class="bar-num text-xs ${textCls}" data-target="${m.score}" data-prefix="%">0.0</span>${star(isBest)}
+            </div>
+            ${noteHtml}
+          </div>`;
+      };
+
+      const barB = (m, key) => {
+        const grad = m.type === 'free' ? 'from-nvidia/70 to-lime-300' : 'from-violet-500/70 to-fuchsia-400';
+        return `
+          <div class="flex items-center gap-2.5">
+            <div class="h-1.5 w-24 shrink-0 overflow-hidden rounded-full bg-white/[0.06]">
+              <div class="bar-fill h-full rounded-full bg-gradient-to-r ${grad}" data-target="${m[key]}" style="width:0%"></div>
+            </div>
+            <span class="bar-num text-xs text-zinc-300" data-target="${m[key]}" data-prefix="">0.0</span>
+          </div>`;
+      };
+
+      function playBar(el) {
+        if (el.dataset.played) return;
+        el.dataset.played = '1';
+        const target = parseFloat(el.dataset.target);
+        const wrap = el.parentElement ? el.parentElement.parentElement : null;
+        const num = wrap ? wrap.querySelector('.bar-num') : null;
+        const fmt = v => ((num && num.dataset.prefix) || '') + v.toFixed(1);
+        if (!M || reduced) {
+          el.style.width = target + '%';
+          if (num) num.textContent = fmt(target);
+          return;
+        }
+        animate(el, { width: target + '%' }, { duration: 1.15, ease: EASE });
+        if (num) animate(0, target, { duration: 1.05, ease: 'easeOut', onUpdate: v => { num.textContent = fmt(v); } });
+      }
+
+      function observeBars() {
+        document.querySelectorAll('.bar-fill').forEach(el => {
+          if (!M || reduced) { playBar(el); return; }
+          inView(el, () => playBar(el), { amount: 0.5 });
+        });
+      }
+
+      function enterRows(containerId) {
+        const scope = document.getElementById(containerId);
+        if (!scope) return;
+        const items = scope.querySelectorAll('tbody tr, .bench-card');
+        if (!items.length) return;
+        if (!M || reduced) { items.forEach(el => { el.style.opacity = '1'; }); return; }
+        const rect = scope.getBoundingClientRect();
+        const vh = window.innerHeight || document.documentElement.clientHeight;
+        const play = () => animate(Array.from(items), { opacity: [0, 1], y: [16, 0] }, { duration: 0.45, delay: stagger(0.04), ease: EASE });
+        if (rect.top < vh && rect.bottom > 0) { play(); return; }
+        const stop = inView(scope, () => { play(); if (stop) stop(); }, { amount: 0.08 });
+      }
+
+      function renderRows(filter) {
+        curA = filter;
+        const list = sortList(SWC.filter(m => filter === 'all' || m.group === filter), 'score', sortA);
+        const countEl = document.getElementById('model-count');
+        if (countEl) countEl.textContent = list.length;
+
+        const rows = list.map(m => {
+          const isBest = m.score !== null && m.score === BEST;
+          return `
+          <tr class="border-t border-white/5 opacity-0 hover:bg-white/[0.03] ${m.group === 'nim' ? 'bg-nvidia/[0.03]' : ''}">
+            <td class="py-4 pl-6 pr-4">
+              <div class="flex items-center gap-3">
+                <span class="grid h-9 w-9 shrink-0 place-items-center rounded-lg border ${m.group === 'nim' ? 'border-nvidia/30 bg-nvidia/10 text-lime-300' : m.group === 'ref' ? 'border-cyan-400/30 bg-cyan-400/10 text-cyan-300' : 'border-white/10 bg-white/5 text-zinc-400'} font-mono text-[11px] font-bold">${m.name.slice(0, 2).toUpperCase()}</span>
+                <div>
+                  <div class="font-sans text-sm font-semibold text-zinc-100">${m.name}${star(isBest)}</div>
+                  <div class="font-sans text-[11px] text-zinc-500">${m.vendor}</div>
+                  <div class="mt-0.5">${srcLink(m)}</div>
+                </div>
+              </div>
+            </td>
+            <td class="px-4 py-4">${badgeA(m)}</td>
+            <td class="px-4 py-4">${barA(m)}</td>
+          </tr>`;
+        }).join('');
+
+        const cards = list.map(m => {
+          const isBest = m.score !== null && m.score === BEST;
+          return `
+          <div class="bench-card lift-card rounded-2xl border opacity-0 p-5 transition-colors hover:border-nvidia/30 ${m.group === 'nim' ? 'border-nvidia/25 bg-nvidia/[0.04]' : 'border-white/[0.07] bg-white/[0.02]'}">
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <div class="font-sans text-base font-semibold text-zinc-100">${m.name}${star(isBest)}</div>
+                <div class="mt-0.5 font-sans text-xs text-zinc-500">${m.vendor}</div>
+                <div class="mt-0.5">${srcLink(m)}</div>
+              </div>
+              ${badgeA(m)}
+            </div>
+            <div class="mt-4 rounded-xl border border-white/[0.06] bg-black/30 p-3.5">
+              <div class="font-sans text-[10px] uppercase tracking-wider text-zinc-500">SWE-bench Verified</div>
+              <div class="mt-2.5">${barA(m)}</div>
+            </div>
+          </div>`;
+        }).join('');
+
+        const bodyEl = document.getElementById('bench-body');
+        const cardsEl = document.getElementById('bench-cards');
+        if (bodyEl) bodyEl.innerHTML = rows;
+        if (cardsEl) cardsEl.innerHTML = cards;
+        enterRows('bench-a-wrap');
+        observeBars();
+      }
+
+      function renderRowsB(filter) {
+        curB = filter;
+        const list = sortList(MODELS_B.filter(m => filter === 'all' || m.type === filter), sortB.key, sortB.dir);
+        const countEl = document.getElementById('model-count-b');
+        if (countEl) countEl.textContent = list.length;
+
+        const rows = list.map(m => `
+          <tr class="border-t border-white/5 opacity-0 hover:bg-white/[0.03] ${m.type === 'free' ? 'bg-nvidia/[0.03]' : ''}">
+            <td class="py-4 pl-6 pr-4">
+              <div class="flex items-center gap-3">
+                <span class="grid h-9 w-9 shrink-0 place-items-center rounded-lg border ${m.type === 'free' ? 'border-nvidia/30 bg-nvidia/10 text-lime-300' : 'border-white/10 bg-white/5 text-zinc-400'} font-mono text-[11px] font-bold">${m.name.slice(0, 2).toUpperCase()}</span>
+                <div>
+                  <div class="font-sans text-sm font-semibold text-zinc-100">${m.name}</div>
+                  <div class="font-sans text-[11px] text-zinc-500">${m.vendor}</div>
+                  <div class="mt-0.5">${srcLink(m)}</div>
+                  ${m.note ? `<div class="mt-0.5 font-sans text-[10px] italic text-zinc-600">${m.note}</div>` : ''}
+                </div>
+              </div>
+            </td>
+            <td class="px-4 py-4">${badgeB(m)}</td>
+            <td class="px-4 py-4">${barB(m, 'deepswe')}</td>
+            <td class="px-4 py-4">${barB(m, 'tbench')}</td>
+          </tr>`).join('');
+
+        const cards = list.map(m => `
+          <div class="bench-card lift-card rounded-2xl border opacity-0 p-5 transition-colors hover:border-nvidia/30 ${m.type === 'free' ? 'border-nvidia/25 bg-nvidia/[0.04]' : 'border-white/[0.07] bg-white/[0.02]'}">
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <div class="font-sans text-base font-semibold text-zinc-100">${m.name}</div>
+                <div class="mt-0.5 font-sans text-xs text-zinc-500">${m.vendor}</div>
+                <div class="mt-0.5">${srcLink(m)}</div>
+              </div>
+              ${badgeB(m)}
+            </div>
+            <div class="mt-4 grid grid-cols-2 gap-3">
+              <div class="rounded-xl border border-white/[0.06] bg-black/30 p-3.5">
+                <div class="font-sans text-[10px] uppercase tracking-wider text-zinc-500">DeepSWE v1.1</div>
+                <div class="mt-2.5">${barB(m, 'deepswe')}</div>
+              </div>
+              <div class="rounded-xl border border-white/[0.06] bg-black/30 p-3.5">
+                <div class="font-sans text-[10px] uppercase tracking-wider text-zinc-500">Terminal-Bench 2.1</div>
+                <div class="mt-2.5">${barB(m, 'tbench')}</div>
+              </div>
+            </div>
+          </div>`).join('');
+
+        const bodyEl = document.getElementById('bench-body-b');
+        const cardsEl = document.getElementById('bench-cards-b');
+        if (bodyEl) bodyEl.innerHTML = rows;
+        if (cardsEl) cardsEl.innerHTML = cards;
+        enterRows('bench-b-wrap');
+        observeBars();
+      }
+
+      function renderCatalog() {
+        const countEl = document.getElementById('catalog-count');
+        if (countEl) countEl.textContent = CATALOG.length;
+
+        const rows = CATALOG.map(m => `
+          <tr class="border-t border-white/5 opacity-0 hover:bg-white/[0.03]">
+            <td class="py-4 pl-6 pr-4">
+              <div class="flex items-center gap-3">
+                <span class="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-nvidia/30 bg-nvidia/10 font-mono text-[11px] font-bold text-lime-300">${m.name.slice(0, 2).toUpperCase()}</span>
+                <a href="${m.url}" target="_blank" rel="noopener" class="font-sans text-sm font-semibold text-zinc-100 underline decoration-nvidia/30 underline-offset-4 transition-colors hover:text-lime-300 hover:decoration-lime-300">${m.name}</a>
+              </div>
+            </td>
+            <td class="px-4 py-4 font-sans text-xs text-zinc-300">${m.vendor}</td>
+            <td class="px-4 py-4 font-mono text-xs text-zinc-300">${m.size}</td>
+            <td class="px-4 py-4 font-mono text-xs text-zinc-300">${m.ctx}</td>
+            <td class="px-4 py-4 font-sans text-xs text-zinc-400">${m.modality}</td>
+          </tr>`).join('');
+
+        const cards = CATALOG.map(m => `
+          <div class="bench-card lift-card rounded-2xl border border-nvidia/25 bg-nvidia/[0.04] p-5">
+            <a href="${m.url}" target="_blank" rel="noopener" class="font-sans text-base font-semibold text-zinc-100 underline decoration-nvidia/30 underline-offset-4 transition-colors hover:text-lime-300">${m.name}</a>
+            <div class="mt-0.5 font-sans text-xs text-zinc-500">${m.vendor}</div>
+            <div class="mt-3 flex flex-wrap gap-2 font-mono text-[11px] text-zinc-300">
+              <span class="rounded-md border border-white/10 bg-black/30 px-2 py-1">${m.size}</span>
+              <span class="rounded-md border border-white/10 bg-black/30 px-2 py-1">${m.ctx} bağlam</span>
+              <span class="rounded-md border border-white/10 bg-black/30 px-2 py-1">${m.modality}</span>
+            </div>
+          </div>`).join('');
+
+        const bodyEl = document.getElementById('catalog-body');
+        const cardsEl = document.getElementById('catalog-cards');
+        if (bodyEl) bodyEl.innerHTML = rows;
+        if (cardsEl) cardsEl.innerHTML = cards;
+        enterRows('catalog-wrap');
+      }
+
+      const setInd = (el, active, dir) => {
+        if (!el) return;
+        el.textContent = active ? (dir === 'desc' ? '↓' : '↑') : '↕';
+        el.className = 'ml-1 ' + (active ? 'text-lime-300' : 'text-zinc-600');
+      };
+
+      const updateIndsB = () => {
+        setInd(document.getElementById('ind-ds'), sortB.key === 'deepswe', sortB.dir);
+        setInd(document.getElementById('ind-tb'), sortB.key === 'tbench', sortB.dir);
+      };
+
+      renderCatalog();
+      renderRows('all');
+      renderRowsB('all');
+      setInd(document.getElementById('ind-a'), true, sortA);
+      updateIndsB();
+
+      const thScoreA = document.getElementById('th-score-a');
+      if (thScoreA) thScoreA.addEventListener('click', () => {
+        sortA = sortA === 'desc' ? 'asc' : 'desc';
+        setInd(document.getElementById('ind-a'), true, sortA);
+        renderRows(curA);
+      });
+
+      const thDsB = document.getElementById('th-ds-b');
+      if (thDsB) thDsB.addEventListener('click', () => {
+        if (sortB.key === 'deepswe') sortB.dir = sortB.dir === 'desc' ? 'asc' : 'desc';
+        else sortB = { key: 'deepswe', dir: 'desc' };
+        updateIndsB();
+        renderRowsB(curB);
+      });
+
+      const thTbB = document.getElementById('th-tb-b');
+      if (thTbB) thTbB.addEventListener('click', () => {
+        if (sortB.key === 'tbench') sortB.dir = sortB.dir === 'desc' ? 'asc' : 'desc';
+        else sortB = { key: 'tbench', dir: 'desc' };
+        updateIndsB();
+        renderRowsB(curB);
+      });
+
+      document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.filter-btn').forEach(b => {
+            b.classList.remove('bg-nvidia', 'text-black');
+            b.classList.add('text-zinc-400');
+          });
+          btn.classList.add('bg-nvidia', 'text-black');
+          btn.classList.remove('text-zinc-400');
+          renderRows(btn.dataset.filter);
+        });
+      });
+
+      document.querySelectorAll('.filter-btn-b').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.filter-btn-b').forEach(b => {
+            b.classList.remove('bg-nvidia', 'text-black');
+            b.classList.add('text-zinc-400');
+          });
+          btn.classList.add('bg-nvidia', 'text-black');
+          btn.classList.remove('text-zinc-400');
+          renderRowsB(btn.dataset.filterB);
+        });
+      });
+
+      document.querySelectorAll('.os-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.os-btn').forEach(b => {
+            b.classList.remove('bg-nvidia', 'text-black');
+            b.classList.add('text-zinc-400');
+          });
+          btn.classList.add('bg-nvidia', 'text-black');
+          btn.classList.remove('text-zinc-400');
+          document.querySelectorAll('.os-panel').forEach(p => p.classList.add('hidden'));
+          const panel = document.getElementById('os-' + btn.dataset.os);
+          if (panel) {
+            panel.classList.remove('hidden');
+            if (M && !reduced) animate(panel, { opacity: [0, 1], y: [10, 0] }, { duration: 0.28, ease: EASE });
+          }
+        });
+      });
+
+      document.querySelectorAll('.copy-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const code = btn.closest('.code-block').querySelector('code');
+          if (!code) return;
+          let ok = false;
+          try {
+            await navigator.clipboard.writeText(code.innerText);
+            ok = true;
+          } catch (e) {
+            try {
+              const ta = document.createElement('textarea');
+              ta.value = code.innerText;
+              ta.style.position = 'fixed';
+              ta.style.opacity = '0';
+              document.body.appendChild(ta);
+              ta.select();
+              ok = document.execCommand('copy');
+              ta.remove();
+            } catch (_) {}
+          }
+          if (ok) {
+            const label = btn.querySelector('.copy-label');
+            if (label) label.textContent = 'Kopyalandı!';
+            btn.classList.add('text-lime-300', 'border-lime-300/40', 'bg-lime-300/10');
+            if (M && !reduced) animate(btn, { scale: [1, 1.15, 1] }, { duration: 0.32, ease: 'easeOut' });
+            setTimeout(() => {
+              if (label) label.textContent = 'Kopyala';
+              btn.classList.remove('text-lime-300', 'border-lime-300/40', 'bg-lime-300/10');
+            }, 1600);
+          }
+        });
+      });
+
+      if (M && !reduced) {
+        try {
+          document.querySelectorAll('[data-reveal]').forEach(el => {
+            inView(el, () => {
+              animate(el, { opacity: [0, 1], y: [28, 0] }, { duration: 0.8, ease: EASE, delay: parseFloat(el.dataset.reveal) || 0 });
+            }, { amount: 0.12 });
+          });
+        } catch (err) { showAllStatic(); }
+
+        try {
+          document.querySelectorAll('[data-count]').forEach(el => {
+            inView(el, () => {
+              const target = parseInt(el.dataset.count, 10);
+              animate(0, target, { duration: 1.1, ease: EASE, onUpdate: v => { el.textContent = Math.round(v); } });
+            }, { amount: 0.5 });
+          });
+        } catch (err) {
+          document.querySelectorAll('[data-count]').forEach(el => { el.textContent = el.dataset.count; });
+        }
+      }
+
+      const progressEl = document.getElementById('progress');
+      const navEl = document.getElementById('site-nav');
+      const onScrollFx = () => {
+        const max = document.documentElement.scrollHeight - window.innerHeight;
+        if (progressEl) progressEl.style.transform = 'scaleX(' + (max > 0 ? window.scrollY / max : 0).toFixed(4) + ')';
+        if (navEl) navEl.classList.toggle('shadow-[0_10px_40px_-15px_rgba(0,0,0,0.8)]', window.scrollY > 24);
+      };
+      if (M) {
+        try { scrollFn(() => onScrollFx()); } catch (err) { window.addEventListener('scroll', onScrollFx, { passive: true }); }
+      } else {
+        window.addEventListener('scroll', onScrollFx, { passive: true });
+      }
+
+      const menuBtn = document.getElementById('menu-btn');
+      const mobileMenu = document.getElementById('mobile-menu');
+      const openIcon = document.getElementById('menu-open-icon');
+      const closeIcon = document.getElementById('menu-close-icon');
+      let menuTimer = null;
+      const toggleMenu = show => {
+        openIcon.classList.toggle('hidden', show);
+        closeIcon.classList.toggle('hidden', !show);
+        if (!M || reduced) { mobileMenu.classList.toggle('hidden', !show); return; }
+        if (show) {
+          clearTimeout(menuTimer);
+          mobileMenu.classList.remove('hidden');
+          animate(mobileMenu, { opacity: [0, 1], y: [-12, 0] }, { duration: 0.3, ease: EASE });
+        } else {
+          animate(mobileMenu, { opacity: 0, y: -12 }, { duration: 0.18, ease: 'easeIn' });
+          menuTimer = setTimeout(() => mobileMenu.classList.add('hidden'), 190);
+        }
+      };
+      menuBtn.addEventListener('click', () => toggleMenu(mobileMenu.classList.contains('hidden')));
+      document.querySelectorAll('.mobile-nav-link').forEach(a => a.addEventListener('click', () => toggleMenu(false)));
+
+      try {
+        if (M && !reduced) {
+          document.querySelectorAll('.filter-btn, .filter-btn-b, .os-btn').forEach(btn => {
+            btn.addEventListener('pointerdown', () => animate(btn, { scale: 0.93 }, { type: 'spring', stiffness: 500, damping: 24 }));
+            ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev =>
+              btn.addEventListener(ev, () => animate(btn, { scale: 1 }, { type: 'spring', stiffness: 420, damping: 22 })));
+          });
+
+          document.addEventListener('mouseover', e => {
+            const card = e.target.closest('.lift-card');
+            if (!card || card.dataset.lift) return;
+            card.dataset.lift = '1';
+            animate(card, { y: -3, scale: 1.015 }, { type: 'spring', stiffness: 320, damping: 26 });
+          });
+          document.addEventListener('mouseout', e => {
+            const card = e.target.closest('.lift-card');
+            if (!card || !card.dataset.lift) return;
+            if (card.contains(e.relatedTarget)) return;
+            delete card.dataset.lift;
+            animate(card, { y: 0, scale: 1 }, { type: 'spring', stiffness: 280, damping: 26 });
+          });
+
+          [['bg-orb-a', 16, 0], ['bg-orb-b', 20, 2.1], ['bg-orb-c', 18, 4.2], ['hero-orb-1', 14, 1.2], ['hero-orb-2', 17, 3.3]].forEach(([id, dur, ph]) => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            animate(el, {
+              x: [0, Math.round(60 * Math.cos(ph)), Math.round(-45 * Math.sin(ph)), 0],
+              y: [0, -48, 38, 0],
+            }, { duration: dur, repeat: Infinity, ease: 'easeInOut' });
+          });
+
+          const heroGrid = document.getElementById('hero-grid');
+          const headerEl = document.querySelector('header');
+          if (heroGrid && headerEl) {
+            scrollFn(animate(heroGrid, { opacity: [1, 0.15], y: [0, 90] }, { ease: 'linear' }), { target: headerEl, offset: ['start start', 'end start'] });
+          }
+
+          const cta = document.getElementById('cta-main');
+          if (cta) {
+            animate(cta, { backgroundPositionX: ['100%', '-100%'] }, { duration: 3, repeat: Infinity, repeatType: 'mirror', ease: 'linear' });
+            if (window.matchMedia('(pointer: fine)').matches) {
+              cta.addEventListener('mousemove', e => {
+                const r = cta.getBoundingClientRect();
+                animate(cta, { x: (e.clientX - r.left - r.width / 2) * 0.18, y: (e.clientY - r.top - r.height / 2) * 0.3 }, { type: 'spring', stiffness: 350, damping: 20 });
+              });
+              cta.addEventListener('mouseleave', () => animate(cta, { x: 0, y: 0 }, { type: 'spring', stiffness: 300, damping: 22 }));
+            }
+          }
+
+          const tilt = document.getElementById('term-tilt');
+          if (tilt && window.matchMedia('(pointer: fine)').matches) {
+            let tiltRaf = 0;
+            tilt.addEventListener('mousemove', e => {
+              const r = tilt.getBoundingClientRect();
+              const px = (e.clientX - r.left) / r.width - 0.5;
+              const py = (e.clientY - r.top) / r.height - 0.5;
+              cancelAnimationFrame(tiltRaf);
+              tiltRaf = requestAnimationFrame(() => {
+                animate(tilt, { rotateX: py * -7, rotateY: px * 9 }, { type: 'spring', stiffness: 200, damping: 18 });
+              });
+            });
+            tilt.addEventListener('mouseleave', () => {
+              cancelAnimationFrame(tiltRaf);
+              animate(tilt, { rotateX: 0, rotateY: 0 }, { type: 'spring', stiffness: 160, damping: 20 });
+            });
+          }
+        }
+      } catch (err) { /* etkileşimler kritik değil */ }
+
+      const TERM_LINES = [
+        [['$', 'text-nvidia'], [' ', ''], ['export', 'text-zinc-200'], [' ', ''], ['NVIDIA_API_KEY', 'text-amber-400'], ['=', ''], ["'nvapi-••••••••••••'", 'text-lime-300']],
+        [["# kalıcı olması için .zshrc'ye ekle", 'text-zinc-500 italic']],
+        [['$', 'text-nvidia'], [' opencode', 'text-zinc-200']],
+        [['>', 'text-nvidia'], [' /model', 'text-zinc-200'], ['  # listeden NIM modelini seç', 'text-zinc-500 italic']],
+      ];
+      const termBody = document.getElementById('term-body');
+      if (termBody) {
+        const caret = document.createElement('span');
+        caret.id = 'term-caret';
+        caret.className = 'ml-[3px] inline-block h-[17px] w-[9px] align-[-3px] bg-lime-300';
+        const buildLine = segments => {
+          const line = document.createElement('div');
+          segments.forEach(([text, cls]) => {
+            const s = document.createElement('span');
+            if (cls) s.className = cls;
+            s.textContent = text;
+            line.appendChild(s);
+          });
+          return line;
+        };
+        if (!M || reduced) {
+          TERM_LINES.forEach(segments => termBody.appendChild(buildLine(segments)));
+          if (termBody.lastChild) termBody.lastChild.appendChild(caret);
+        } else {
+          animate(caret, { opacity: [1, 0] }, { duration: 1.05, repeat: Infinity, repeatType: 'mirror', ease: 'linear' });
+          let li = 0, si = 0, ci = 0, lineEl = null, segEl = null;
+          const step = () => {
+            if (li >= TERM_LINES.length) return;
+            const segments = TERM_LINES[li];
+            if (!lineEl) {
+              lineEl = document.createElement('div');
+              termBody.appendChild(lineEl);
+              lineEl.appendChild(caret);
+            }
+            if (si >= segments.length) {
+              li++; si = 0; ci = 0; lineEl = null; segEl = null;
+              setTimeout(step, 160);
+              return;
+            }
+            const [text, cls] = segments[si];
+            if (!segEl) {
+              segEl = document.createElement('span');
+              if (cls) segEl.className = cls;
+              lineEl.insertBefore(segEl, caret);
+            }
+            ci++;
+            segEl.textContent = text.slice(0, ci);
+            if (ci >= text.length) { si++; ci = 0; segEl = null; }
+            setTimeout(step, 14);
+          };
+          setTimeout(step, 700);
+        }
+      }
+
+      const canvas = document.getElementById('bg-canvas');
+      if (canvas) {
+        const ctx = canvas.getContext('2d');
+        const COLORS = ['118,185,0', '163,230,53', '34,211,238', '118,185,0', '163,230,53', '192,132,252'];
+        let w = 0, h = 0, particles = [], streaks = [], flow = 0, lastY = window.scrollY;
+
+        const sprites = COLORS.map(c => {
+          const s = document.createElement('canvas');
+          s.width = s.height = 64;
+          const g = s.getContext('2d');
+          const grad = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+          grad.addColorStop(0, `rgba(${c},0.9)`);
+          grad.addColorStop(0.3, `rgba(${c},0.3)`);
+          grad.addColorStop(1, `rgba(${c},0)`);
+          g.fillStyle = grad;
+          g.fillRect(0, 0, 64, 64);
+          return s;
+        });
+
+        const initParticles = () => {
+          const count = Math.max(14, Math.min(Math.floor((w * h) / 17000), 85));
+          particles = [];
+          for (let i = 0; i < count; i++) {
+            particles.push({
+              x: Math.random() * w,
+              y: Math.random() * h,
+              r: 0.9 + Math.random() * 1.9,
+              vx: (Math.random() - 0.5) * 0.16,
+              vy: (Math.random() - 0.5) * 0.16,
+              ci: Math.floor(Math.random() * COLORS.length),
+              a: 0.28 + Math.random() * 0.34,
+            });
+          }
+        };
+
+        const resize = () => {
+          const dpr = Math.min(window.devicePixelRatio || 1, 2);
+          w = window.innerWidth;
+          h = window.innerHeight;
+          canvas.width = Math.round(w * dpr);
+          canvas.height = Math.round(h * dpr);
+          ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+          initParticles();
+        };
+
+        const spawnStreak = () => {
+          if (streaks.length >= 7) return;
+          const dir = flow >= 0 ? 1 : -1;
+          streaks.push({
+            x: Math.random() * w,
+            y: dir > 0 ? -40 : h + 40,
+            vy: dir * (3.2 + Math.random() * 3.6),
+            len: 36 + Math.random() * 72,
+            life: 1,
+            ci: Math.floor(Math.random() * 3),
+          });
+        };
+
+        const draw = () => {
+          ctx.clearRect(0, 0, w, h);
+          const energy = Math.min(Math.abs(flow) / 3, 1);
+          const R = 132, R2 = R * R;
+          for (let i = 0; i < particles.length; i++) {
+            const a = particles[i];
+            for (let j = i + 1; j < particles.length; j++) {
+              const b = particles[j];
+              const dx = a.x - b.x, dy = a.y - b.y;
+              const d2 = dx * dx + dy * dy;
+              if (d2 < R2) {
+                const t = 1 - Math.sqrt(d2) / R;
+                ctx.strokeStyle = `rgba(${COLORS[a.ci]},${(0.085 * t * (0.5 + energy * 0.5)).toFixed(3)})`;
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(a.x, a.y);
+                ctx.lineTo(b.x, b.y);
+                ctx.stroke();
+              }
+            }
+          }
+          for (const p of particles) {
+            const s = p.r * 7;
+            ctx.globalAlpha = Math.min(1, p.a + energy * 0.15);
+            ctx.drawImage(sprites[p.ci], p.x - s / 2, p.y - s / 2, s, s);
+          }
+          ctx.globalAlpha = 1;
+          for (let i = streaks.length - 1; i >= 0; i--) {
+            const s = streaks[i];
+            s.y += s.vy * (0.6 + energy);
+            s.life -= 0.012;
+            if (s.life <= 0 || s.y < -160 || s.y > h + 160) { streaks.splice(i, 1); continue; }
+            const dirSign = s.vy > 0 ? 1 : -1;
+            const tail = s.y - s.len * dirSign;
+            const c = COLORS[s.ci];
+            const grad = ctx.createLinearGradient(s.x, s.y, s.x, tail);
+            grad.addColorStop(0, `rgba(${c},${(0.5 * s.life).toFixed(3)})`);
+            grad.addColorStop(1, `rgba(${c},0)`);
+            ctx.strokeStyle = grad;
+            ctx.lineWidth = 1.4;
+            ctx.beginPath();
+            ctx.moveTo(s.x, s.y);
+            ctx.lineTo(s.x, tail);
+            ctx.stroke();
+          }
+        };
+
+        const loop = () => {
+          flow *= 0.94;
+          const speed = 1 + Math.min(Math.abs(flow) * 0.25, 1.2);
+          for (const p of particles) {
+            p.x += p.vx * speed;
+            p.y += (p.vy + flow * 0.55) * speed;
+            if (p.x < -24) p.x = w + 24; else if (p.x > w + 24) p.x = -24;
+            if (p.y < -24) p.y = h + 24; else if (p.y > h + 24) p.y = -24;
+          }
+          if (Math.abs(flow) > 0.35 && Math.random() < Math.abs(flow) * 0.09) spawnStreak();
+          draw();
+          requestAnimationFrame(loop);
+        };
+
+        window.addEventListener('resize', resize);
+        window.addEventListener('scroll', () => {
+          const y = window.scrollY;
+          flow = Math.max(-3, Math.min(3, flow + (y - lastY) * 0.05));
+          lastY = y;
+        }, { passive: true });
+
+        resize();
+        if (reduced) draw(); else requestAnimationFrame(loop);
+      }
+    })();
+  </script>
+</body>
+</html>
